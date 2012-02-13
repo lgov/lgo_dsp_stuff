@@ -44,8 +44,10 @@ void convolution(unsigned char *inptr, unsigned char *outptr, int x, int y, int 
 		}
 	}
 	cur = outptr + x + y;
+	if (r < 0) r = 0; 	if (g < 0) g = 0; 	if (b < 0) b = 0;
+	if (r > 255) r = 255; if (g > 255) g = 255; if (b > 255) b = 255;
 
-	*cur++ = r; *cur++ = g; *cur++ = b;
+	*cur++ = r; *cur++ = g; *cur++ = b; *cur++ = 0;
 }
 
 void filter(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
@@ -55,12 +57,6 @@ void filter(unsigned char *inptr, unsigned char *outptr, int width, int height, 
 			int xloc = x * bitsPerPixel / 8;
 			int yloc = y * width * bitsPerPixel / 8;
 			convolution(inptr, outptr, xloc, yloc, width, height, bitsPerPixel, sharpen);
-#if 0
-			char red = imageBytes[cur]; imageBytes[cur++] = 0;
-			char green = imageBytes[cur++];
-			char blue = imageBytes[cur++];
-			if (bitsPerPixel == 32) cur++;
-#endif
 		}
 	}
 }
@@ -86,17 +82,16 @@ void filter(unsigned char *inptr, unsigned char *outptr, int width, int height, 
 										 initWithBitmapDataPlanes:NULL
 										 pixelsWide:width
 										 pixelsHigh:height
-										 bitsPerSample:8
-										 samplesPerPixel:4
-										 hasAlpha:YES
-										 isPlanar:YES
-										 colorSpaceName:NSCalibratedRGBColorSpace
-										 bytesPerRow:0
-										 bitsPerPixel:0];
+										 bitsPerSample:[inImageRep bitsPerSample]
+										 samplesPerPixel:[inImageRep samplesPerPixel]
+										 hasAlpha:[inImageRep hasAlpha]
+										 isPlanar:[inImageRep isPlanar]
+										 colorSpaceName:[inImageRep colorSpaceName]
+										 bytesPerRow:[inImageRep bytesPerRow]
+										 bitsPerPixel:[inImageRep bitsPerPixel]];
 		NSImage* outImage = [[[NSImage alloc] init] autorelease];
 		[outImage addRepresentation:outImageRep];
 		outputImgBytes = [outImageRep bitmapData];
-
 		filter(inputImgBytes, outputImgBytes, width, height, bitsPerPixel);
 		[imageView setImage:outImage];
 	}
