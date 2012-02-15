@@ -14,6 +14,7 @@
 	NSImage* image;
 	unsigned char* inputImgBytes;
 	unsigned char* outputImgBytes;
+	unsigned char* outputImg2Bytes;
 }
 
 - (IBAction)calcSpectrum:(id)sender;
