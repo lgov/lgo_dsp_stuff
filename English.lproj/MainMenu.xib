@@ -1354,13 +1354,13 @@
 						<object class="NSButton" id="733290463">
 							<reference key="NSNextResponder" ref="439893737"/>
 							<int key="NSvFlags">292</int>
-							<string key="NSFrame">{{14, 12}, {126, 32}}</string>
+							<string key="NSFrame">{{1, 12}, {153, 32}}</string>
 							<reference key="NSSuperview" ref="439893737"/>
 							<bool key="NSEnabled">YES</bool>
 							<object class="NSButtonCell" key="NSCell" id="996328388">
 								<int key="NSCellFlags">67239424</int>
 								<int key="NSCellFlags2">134217728</int>
-								<string key="NSContents">FFT Spectrum</string>
+								<string key="NSContents">Connected comps</string>
 								<object class="NSFont" key="NSSupport" id="254677914">
 									<string key="NSName">LucidaGrande</string>
 									<double key="NSSize">13</double>
@@ -1384,9 +1384,29 @@
 							<object class="NSButtonCell" key="NSCell" id="501999525">
 								<int key="NSCellFlags">67239424</int>
 								<int key="NSCellFlags2">134217728</int>
-								<string key="NSContents">FFT Edges</string>
+								<string key="NSContents">Sharpen</string>
 								<reference key="NSSupport" ref="254677914"/>
 								<reference key="NSControlView" ref="300478289"/>
+								<int key="NSButtonFlags">-2038284033</int>
+								<int key="NSButtonFlags2">129</int>
+								<string key="NSAlternateContents"/>
+								<string key="NSKeyEquivalent"/>
+								<int key="NSPeriodicDelay">200</int>
+								<int key="NSPeriodicInterval">25</int>
+							</object>
+						</object>
+						<object class="NSButton" id="497140682">
+							<reference key="NSNextResponder" ref="439893737"/>
+							<int key="NSvFlags">292</int>
+							<string key="NSFrame">{{289, 12}, {126, 32}}</string>
+							<reference key="NSSuperview" ref="439893737"/>
+							<bool key="NSEnabled">YES</bool>
+							<object class="NSButtonCell" key="NSCell" id="696319764">
+								<int key="NSCellFlags">67239424</int>
+								<int key="NSCellFlags2">134217728</int>
+								<string key="NSContents">Prepare</string>
+								<reference key="NSSupport" ref="254677914"/>
+								<reference key="NSControlView" ref="497140682"/>
 								<int key="NSButtonFlags">-2038284033</int>
 								<int key="NSButtonFlags2">129</int>
 								<string key="NSAlternateContents"/>
@@ -2130,19 +2150,27 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBActionConnection" key="connection">
-						<string key="label">calcSpectrum:</string>
-						<reference key="source" ref="976324537"/>
-						<reference key="destination" ref="733290463"/>
-					</object>
-					<int key="connectionID">551</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBActionConnection" key="connection">
-						<string key="label">calcEdge:</string>
+						<string key="label">calcEdges:</string>
 						<reference key="source" ref="976324537"/>
 						<reference key="destination" ref="300478289"/>
 					</object>
-					<int key="connectionID">552</int>
+					<int key="connectionID">553</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">calcConnCons:</string>
+						<reference key="source" ref="976324537"/>
+						<reference key="destination" ref="733290463"/>
+					</object>
+					<int key="connectionID">554</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">prepare:</string>
+						<reference key="source" ref="976324537"/>
+						<reference key="destination" ref="497140682"/>
+					</object>
+					<int key="connectionID">558</int>
 				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -2705,6 +2733,7 @@
 							<reference ref="1059742038"/>
 							<reference ref="300478289"/>
 							<reference ref="733290463"/>
+							<reference ref="497140682"/>
 						</object>
 						<reference key="parent" ref="972006081"/>
 					</object>
@@ -3250,6 +3279,20 @@
 						<reference key="object" ref="690908225"/>
 						<reference key="parent" ref="1059742038"/>
 					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">555</int>
+						<reference key="object" ref="497140682"/>
+						<object class="NSMutableArray" key="children">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<reference ref="696319764"/>
+						</object>
+						<reference key="parent" ref="439893737"/>
+					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">556</int>
+						<reference key="object" ref="696319764"/>
+						<reference key="parent" ref="497140682"/>
+					</object>
 				</object>
 			</object>
 			<object class="NSMutableDictionary" key="flattenedProperties">
@@ -3484,6 +3527,9 @@
 					<string>545.IBPluginDependency</string>
 					<string>545.IBViewBoundsToFrameTransform</string>
 					<string>546.IBPluginDependency</string>
+					<string>555.IBPluginDependency</string>
+					<string>555.IBViewBoundsToFrameTransform</string>
+					<string>556.IBPluginDependency</string>
 					<string>56.IBPluginDependency</string>
 					<string>56.ImportedFromIB2</string>
 					<string>57.IBEditorWindowLastContentRect</string>
@@ -3749,12 +3795,17 @@
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<object class="NSAffineTransform">
-						<bytes key="NSTransformStruct">P4AAAL+AAABDHAAAwwoAAA</bytes>
+						<bytes key="NSTransformStruct">P4AAAL+AAABDGgAAwigAAA</bytes>
 					</object>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<object class="NSAffineTransform">
 						<bytes key="NSTransformStruct">P4AAAL+AAABDtQAAw9sAAA</bytes>
+					</object>
+					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
+					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
+					<object class="NSAffineTransform">
+						<bytes key="NSTransformStruct">P4AAAL+AAABDHAAAwwoAAA</bytes>
 					</object>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
 					<string>com.apple.InterfaceBuilder.CocoaPlugin</string>
@@ -3809,7 +3860,7 @@
 				</object>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">552</int>
+			<int key="maxID">558</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -3821,12 +3872,14 @@
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<string>calcEdge:</string>
-							<string>calcSpectrum:</string>
+							<string>calcConnCons:</string>
+							<string>calcEdges:</string>
 							<string>loadImage:</string>
+							<string>prepare:</string>
 						</object>
 						<object class="NSMutableArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>id</string>
 							<string>id</string>
 							<string>id</string>
 							<string>id</string>
@@ -3836,22 +3889,27 @@
 						<bool key="EncodedWithXMLCoder">YES</bool>
 						<object class="NSArray" key="dict.sortedKeys">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<string>calcEdge:</string>
-							<string>calcSpectrum:</string>
+							<string>calcConnCons:</string>
+							<string>calcEdges:</string>
 							<string>loadImage:</string>
+							<string>prepare:</string>
 						</object>
 						<object class="NSMutableArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
 							<object class="IBActionInfo">
-								<string key="name">calcEdge:</string>
+								<string key="name">calcConnCons:</string>
 								<string key="candidateClassName">id</string>
 							</object>
 							<object class="IBActionInfo">
-								<string key="name">calcSpectrum:</string>
+								<string key="name">calcEdges:</string>
 								<string key="candidateClassName">id</string>
 							</object>
 							<object class="IBActionInfo">
 								<string key="name">loadImage:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">prepare:</string>
 								<string key="candidateClassName">id</string>
 							</object>
 						</object>

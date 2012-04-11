@@ -12,13 +12,16 @@
 @interface dsptestview : NSObject {
 	IBOutlet NSImageView* imageView;
 	NSImage* image;
+	NSBitmapImageRep* inImageRep;
+
 	unsigned char* inputImgBytes;
 	unsigned char* outputImgBytes;
 	unsigned char* outputImg2Bytes;
 }
 
-- (IBAction)calcSpectrum:(id)sender;
-- (IBAction)calcEdge:(id)sender;
+- (IBAction)calcConnCons:(id)sender;
+- (IBAction)calcEdges:(id)sender;
+- (IBAction)prepare:(id)sender;
 - (IBAction)loadImage:(id)sender;
 
 @end
