@@ -12,8 +12,11 @@
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		F32C1ED714E30B1600C594FB /* dsptestview.m in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.m */; };
+		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F38C2C6214E6E7B600C6152C /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F38C2C6114E6E7B600C6152C /* Accelerate.framework */; };
+		F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3FE478C153956CF00CA9DDF /* tessocr.mm */; };
+		F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F3FE4840153965A900CA9DDF /* libtesseract.a */; };
+		F3FEF2CC153AC5B200CA9DDF /* tessdata in Resources */ = {isa = PBXBuildFile; fileRef = F3FEF2C1153AC5B200CA9DDF /* tessdata */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,8 +33,12 @@
 		8D1107310486CEB800E47090 /* dsptest1-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "dsptest1-Info.plist"; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* dsptest1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dsptest1.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F32C1ED514E30B1600C594FB /* dsptestview.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dsptestview.h; sourceTree = "<group>"; };
-		F32C1ED614E30B1600C594FB /* dsptestview.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = dsptestview.m; sourceTree = "<group>"; };
+		F32C1ED614E30B1600C594FB /* dsptestview.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = dsptestview.mm; sourceTree = "<group>"; };
 		F38C2C6114E6E7B600C6152C /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		F3FE478B153956CF00CA9DDF /* tessocr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tessocr.h; sourceTree = "<group>"; };
+		F3FE478C153956CF00CA9DDF /* tessocr.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = tessocr.mm; sourceTree = "<group>"; };
+		F3FE4840153965A900CA9DDF /* libtesseract.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtesseract.a; sourceTree = "<group>"; };
+		F3FEF2C1153AC5B200CA9DDF /* tessdata */ = {isa = PBXFileReference; lastKnownFileType = folder; path = tessdata; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +48,7 @@
 			files = (
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
 				F38C2C6214E6E7B600C6152C /* Accelerate.framework in Frameworks */,
+				F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -85,14 +93,18 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F3FEF2C1153AC5B200CA9DDF /* tessdata */,
+				F3FE4840153965A900CA9DDF /* libtesseract.a */,
 				080E96DDFE201D6D7F000001 /* Classes */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 				F32C1ED514E30B1600C594FB /* dsptestview.h */,
-				F32C1ED614E30B1600C594FB /* dsptestview.m */,
+				F32C1ED614E30B1600C594FB /* dsptestview.mm */,
 				F38C2C6114E6E7B600C6152C /* Accelerate.framework */,
+				F3FE478B153956CF00CA9DDF /* tessocr.h */,
+				F3FE478C153956CF00CA9DDF /* tessocr.mm */,
 			);
 			name = dsptest1;
 			sourceTree = "<group>";
@@ -177,6 +189,7 @@
 			files = (
 				8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */,
 				1DDD58160DA1D0A300B32029 /* MainMenu.xib in Resources */,
+				F3FEF2CC153AC5B200CA9DDF /* tessdata in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -189,7 +202,8 @@
 			files = (
 				8D11072D0486CEB800E47090 /* main.m in Sources */,
 				256AC3DA0F4B6AC300CF3369 /* dsptest1AppDelegate.m in Sources */,
-				F32C1ED714E30B1600C594FB /* dsptestview.m in Sources */,
+				F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */,
+				F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +242,10 @@
 				GCC_PREFIX_HEADER = dsptest1_Prefix.pch;
 				INFOPLIST_FILE = "dsptest1-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				PRODUCT_NAME = dsptest1;
 			};
 			name = Debug;
@@ -242,6 +260,10 @@
 				GCC_PREFIX_HEADER = dsptest1_Prefix.pch;
 				INFOPLIST_FILE = "dsptest1-Info.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SRCROOT)\"",
+				);
 				PRODUCT_NAME = dsptest1;
 			};
 			name = Release;
@@ -254,9 +276,11 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = macosx10.6;
+				USER_HEADER_SEARCH_PATHS = "/usr/local/include/tesseract/** /usr/local/include/leptonica/**";
 			};
 			name = Debug;
 		};

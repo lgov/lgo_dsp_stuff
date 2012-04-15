@@ -11,6 +11,7 @@
 
 @interface dsptestview : NSObject {
 	IBOutlet NSImageView* imageView;
+	IBOutlet NSTextField* lbl;
 	NSImage* image;
 	NSBitmapImageRep* inImageRep;
 
@@ -22,6 +23,6 @@
 - (IBAction)calcConnCons:(id)sender;
 - (IBAction)calcEdges:(id)sender;
 - (IBAction)prepare:(id)sender;
-- (IBAction)loadImage:(id)sender;
+- (IBAction)ocr:(id)sender;
 
 @end
