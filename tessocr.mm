@@ -20,7 +20,7 @@
 
 	// this could take a while. maybe needs to happen asynchronously.
 	char* text = tess->TesseractRect(imagedata,(int)bytes_per_pixel,(int)bytes_per_line,
-									 0, 0, width, height);
+									 55, 244, 234-55,270-244);
 
 	return text;
 }

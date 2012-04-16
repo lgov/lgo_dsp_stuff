@@ -219,6 +219,7 @@ typedef struct {
 	short int ymin;
 	short int xmax;
 	short int ymax;
+	int index;
 } comp_range;
 
 void connected(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
@@ -290,13 +291,14 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 			if (compsranges[currentcomp].ymax == 0 ||
 				y > compsranges[currentcomp].ymax)
 				compsranges[currentcomp].ymax = y + 1;
+			compsranges[currentcomp].index = -1;
 
             *(comps+y*width+x) = currentcomp;
 		}
 	}
 
-	int minwidth=3;
-	int minheight=3;
+	int minwidth=5;
+	int minheight=5;
 	int maxwidth = 50;
 	int maxheight = 50;
 	int maxratio = 5;
@@ -315,7 +317,6 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 				newcolor = 0x000000;
 			if (compsranges[comp].ymax - compsranges[comp].ymin > maxheight)
 				newcolor = 0x000000;
-
 #if 0
 			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
 				newcolor = 0x000000;
@@ -338,12 +339,100 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 		}
 	}
 
+	int maxdelta = 20;
+
+	NSMutableArray* lines = [[NSMutableArray alloc] init];
+
+	// create connected sets along the horizontal axis.
+	for (int y = 0; y < height; y+=3) {
+		int prevcomp = -1;
+		for (int x = 0; x < width; x+=3) {
+			int comp = *(comps+y*width+x);
+
+			if (comp == prevcomp)
+				continue;
+			// only keep those components that match certain shape requirements.
+			if (compsranges[comp].xmax - compsranges[comp].xmin > maxwidth)
+				continue;
+			if (compsranges[comp].ymax - compsranges[comp].ymin > maxheight)
+				continue;
+			if ((compsranges[comp].xmax - compsranges[comp].xmin < minwidth) &&
+				(compsranges[comp].ymax - compsranges[comp].ymin < minheight))
+				continue;
+			if (prevcomp != -1 && compsranges[comp].xmin - compsranges[prevcomp].xmax < maxdelta) {
+				// add to same set.
+				int index = compsranges[prevcomp].index;
+				compsranges[comp].index = index;
+				NSMutableSet *line = [lines objectAtIndex:index];
+				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range)];
+				[line addObject:crval];
+			} else {
+				// add to new set.
+				NSMutableSet *newline = [[NSMutableSet alloc] init];
+				compsranges[comp].index = [lines count]; // current index = (current array size++) - 1
+				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range)];
+				[newline addObject:crval];
+				[lines addObject:newline];
+			}
+			prevcomp = comp;
+		}
+	}
+
+	for(NSMutableSet* set in lines) {
+		// calculate bounding box for each set
+		int bbxmin=width, bbxmax=0, bbymin=height, bbymax=0;
+		for(NSValue* crval in set) {
+			comp_range comp;
+			[crval getValue:&comp];
+			if (comp.xmin < bbxmin) bbxmin = comp.xmin;
+			if (comp.ymin < bbymin) bbymin = comp.ymin;
+			if (comp.xmax > bbxmax) bbxmax = comp.xmax;
+			if (comp.ymax > bbymax) bbymax = comp.ymax;
+		}
+
+		if ((bbxmax - bbxmin < 10) &&
+			(bbymax - bbymin < 10))
+			continue;
+
+		// draw a blue bouding box
+
+		for (int x = bbxmin; x < bbxmax; x++) {
+			int xloc = x * bitsPerPixel / 8;
+			// top
+			int yloc = bbymin * width * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+			// bottom
+			yloc = bbymax * width * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+		}
+
+		for (int y = bbymin; y < bbymax; y++) {
+			int yloc = y * width * bitsPerPixel / 8;
+
+			int xloc = bbxmin * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+
+			xloc = bbxmax * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+		}
+	}
+
 	printf("result\n");
 }
 
 - (void) awakeFromNib
 {
 	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863-800x600.JPG";
+//	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/frits_and_freddy.jpg";
+//  NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/a_single_man.jpg";
 	image = [[NSImage alloc] initWithContentsOfFile:imageName];
 
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
@@ -424,7 +513,6 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
-	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lumoutbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
@@ -484,7 +572,7 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 */
 	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 
-	char* text = [ocr run_tesseract:inputImgBytes
+	char* text = [ocr run_tesseract:lumbuf
 						bytes_per_pixel:1
 						bytes_per_line:width
 						width:width
