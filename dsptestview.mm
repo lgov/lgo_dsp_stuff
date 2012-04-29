@@ -13,15 +13,15 @@
 
 @implementation dsptestview
 
-float sharpen[3][3]  = { { -1, -1, -1 },
-	                  { -1,  8, -1 },
-					  { -1, -1, -1 } };
+int sharpen[3][3]  = { { -1, -1, -1 },
+    { -1,  8, -1 },
+    { -1, -1, -1 } };
 
-float smoothen[3][3]  = { { 1, 1, 1 },
+int smoothen[3][3]  = { { 1, 1, 1 },
 	{ 1, 1, 1 },
 	{ 1, 1, 1 } };
 
-float LoG[9][9] = {
+int LoG[9][9] = {
 	{ 0, 1, 1, 2, 2, 2, 1, 1, 0 },
 	{ 1, 2, 4, 5, 5, 5, 4, 2, 1 },
 	{ 1, 4, 5, 3, 0, 3, 5, 4, 1 },
@@ -32,38 +32,92 @@ float LoG[9][9] = {
 	{ 1, 4, 5, 3, 0, 3, 5, 4, 1 },
 	{ 0, 1, 1, 2, 2, 2, 1, 1, 0 } };
 
-// both x and y in bytes.
-// outptr points to x,y point in output buffer.
-void convolution_and_convert_to_gray(unsigned char *inptr, float *outptr,
-				 int x, int y,
-				 int width, int height, int bitsPerPixel,
-				 float *matrix, int matrixSize,
-				 float *min, float *max)
+typedef struct {
+	short int xmin;
+	short int ymin;
+	short int xmax;
+	short int ymax;
+} bounding_box_t;
+
+void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
+						int width, int height, int bitsPerPixel)
 {
-	float r=0, g=0, b=0;
-	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
 	int rowPixels = width * bitsPerPixel / 8;
-	unsigned char *incur;
-
-	// calculate convolution of one pixel!
-	for (int i = 0; i < matrixSize; i++) {
-		int yloc = (y + (i - offset)) * rowPixels;
-		if (yloc < 0) continue;
-
-		for (int j= 0; j < matrixSize; j++) {
-			int xloc = (x + (j - offset)) * bitsPerPixel / 8;
-			if (xloc < 0) continue;
-
-			incur = inptr + yloc + xloc;
-			float m = *(matrix + (i * matrixSize) + j);
-			r += (float)(*incur++) * m;  // r
-			g += (float)(*incur++) * m;  // g
-			b += (float)(*incur++) * m;  // b
+    
+	for (int y = 0; y < height; y++) {
+		int yloc = y * rowPixels;
+		unsigned char *lumptr = lumbuf + y * width;
+        
+		for (int x = 0; x < width; x++) {
+			int xloc = x * bitsPerPixel / 8;
+            
+			unsigned char *curout = outbuf + yloc + xloc;
+            
+			*curout++ = *lumptr; // r
+			*curout++ = *lumptr; // g
+			*curout++ = *lumptr++; // b
+			*curout++ = 0;
 		}
 	}
+}
 
+void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
+						unsigned char *histogram, int width, int height, int bitsPerPixel)
+{
+    memset(histogram, 0, 256);
+    
+	int rowPixels = width * bitsPerPixel / 8;
+    
+	for (int y = 0; y < height; y++) {
+		int yloc = y * rowPixels;
+		unsigned char *lumptr = lumbuf + y * width;
+        
+		for (int x = 0; x < width; x++) {
+			int xloc = x * bitsPerPixel / 8;
+            
+			unsigned char *curin = inbuf + yloc + xloc;
+            
+			unsigned char r = *curin++,
+            g = *curin++,
+            b = *curin++;
+			// calculate luminance from rgb
+			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
+            
+			*lumptr++ = lum; // r
+            
+            (*(histogram+(unsigned char)lum))++;
+		}
+	}
+}
+
+// both x and y in bytes.
+// outptr points to x,y point in output buffer.
+void convolution(unsigned char *lumin, int *outptr,
+                 int x, int y,
+                 int width, int height, int bitsPerPixel,
+                 int *matrix, int matrixSize,
+                 int *min, int *max)
+{
+	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
+	unsigned char *incur;
+    int lum = 0;
+    
+	// calculate convolution of one pixel!
+	for (int i = 0; i < matrixSize; i++) {
+		int yloc = (y + (i - offset)) * width;
+		if (yloc < 0) continue;
+        
+		for (int j= 0; j < matrixSize; j++) {
+			int xloc = x + (j - offset);
+			if (xloc < 0) continue;
+            
+			incur = lumin + yloc + xloc;
+			int m = *(matrix + (i * matrixSize) + j);
+			lum += (int)*incur * m;
+		}
+	}
+    
 	// calculate luminance from rgb
-	float lum = 0.3 * r + 0.59 * g + 0.11 * b;
 	if (lum < *min)
 		*min = lum;
 	if (lum > *max)
@@ -74,106 +128,72 @@ void convolution_and_convert_to_gray(unsigned char *inptr, float *outptr,
 void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 								int width, int height, int bitsPerPixel)
 {
-	float* lumbuf = (float*)malloc(width * height * sizeof(float));
-	float* lumptr;
-	float min = 0, max = 0;
+	unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+	int* lumbuf = (int*)malloc(width * height * sizeof(int));
+	int* lumptr;
+	int min = 0, max = 0;
 	unsigned char *curout;
-
+    unsigned char histogram[256];
+    
+    rgb_convert_to_lum(inbuf, lumin, histogram, width, height, bitsPerPixel);
+    
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			lumptr = lumbuf + y * width + x;
-			convolution_and_convert_to_gray(inbuf, lumptr,
-											x, y, width, height, bitsPerPixel,
-											(float*)LoG, 9,
-											&min, &max);
+			convolution(lumin, lumptr,
+                        x, y, width, height, bitsPerPixel,
+                        (int*)LoG, 9,
+                        &min, &max);
 		}
 	}
-
+    
 	// minimum and maximum luminance is stored in min and max respectively.
-
+    
 	// copy intermediate luminance buffer to output luminance buffer,
 	// adapt values to range.
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			lumptr = lumbuf + y * width + x;
-			float lum = *lumptr;
+			int lum = *lumptr;
 			float gray = ((lum - min) / ((max - min)/255));
-
+            
 			curout = outbuf + y * width + x;
-
+            
 			*curout++ = (unsigned char)gray;
 		}
 	}
 }
 
-void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
-						int width, int height, int bitsPerPixel)
-{
-	int rowPixels = width * bitsPerPixel / 8;
-
-	for (int y = 0; y < height; y++) {
-		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
-
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-
-			unsigned char *curout = outbuf + yloc + xloc;
-
-			*curout++ = *lumptr; // r
-			*curout++ = *lumptr; // g
-			*curout++ = *lumptr++; // b
-			*curout++ = 0;
-		}
-	}
-}
-
-void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
-						int width, int height, int bitsPerPixel)
-{
-	int rowPixels = width * bitsPerPixel / 8;
-
-	for (int y = 0; y < height; y++) {
-		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
-
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-
-			unsigned char *curin = inbuf + yloc + xloc;
-
-			unsigned char r = *curin++,
-              			  g = *curin++,
-			              b = *curin++;
-			// calculate luminance from rgb
-			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
-
-			*lumptr++ = lum; // r
-		}
-	}
-}
-
-void binarization(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
+/* currently based on tresholds recovered from the histogram of the image. */
+void binarization(unsigned char *inlum, unsigned char *outlum, unsigned char *historgram, 
+                  int width, int height)
 {
 	unsigned char *curin, *curout;
-	int r,g,b;
-	int newcolor;
 
+    // calculate tresholds
+    unsigned char ranges[100] = { 0, 8, 21, 105, 120, 251, 255 };
+    unsigned char color_per_range[100] = { 0, 64, 0, 128, 0, 255 };
+    int nr_of_ranges = 6;
+#if 0
+    unsigned char ranges[100] = { 0, 251, 255 };
+    unsigned char color_per_range[100] = { 0, 255 };
+    int nr_of_ranges = 6;
+#endif
+    
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-			int yloc = y * width * bitsPerPixel / 8;
 
-			curin = inptr + xloc + yloc;
-			curout = outptr + xloc + yloc;
+			curin = inlum + y * width + x;
+			curout = outlum + y * width + x;
 
-			r = *curin++; g = *curin++; b = *curin++; curin++;
-
-			if (r * r + g * g + b * b > 128 * 128 * 3)
-				newcolor = 255;
-			else
-				newcolor =	0;
-			*curout++ = newcolor; *curout++ = 0; *curout++ = 0;
+            unsigned char lum = *curin;
+            
+            for (int i = 0; i < nr_of_ranges; i++) {
+                if (lum <= ranges[i+1]) {
+                    *curout = color_per_range[i];
+                    break;
+                }
+            }
 		}
 	}
 }
@@ -222,7 +242,7 @@ typedef struct {
 	int index;
 } comp_range;
 
-void connected(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
+NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
 {
 	int r,g,b;
 	unsigned char* cur;
@@ -230,6 +250,7 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	int newcolor = 0x080808;
 	int prevx, prevy;
 	int* comps = (int*)malloc(width * height * sizeof(int));
+
 	comp_range* compsranges = (comp_range*)malloc(width * height *
 												  sizeof(comp_range));
 
@@ -280,16 +301,16 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 			// use x + 1 and y + 1 to use 0 as uninitialized.
 			// doesn't matter for calculating width/height.
 			if (compsranges[currentcomp].xmin == 0 ||
-				x < compsranges[currentcomp].xmin)
+				x + 1 < compsranges[currentcomp].xmin)
 				compsranges[currentcomp].xmin = x + 1;
 			if (compsranges[currentcomp].xmax == 0 ||
-				x > compsranges[currentcomp].xmax)
+				x + 1 > compsranges[currentcomp].xmax)
 				compsranges[currentcomp].xmax = x + 1;
 			if (compsranges[currentcomp].ymin == 0 ||
-				y < compsranges[currentcomp].ymin)
+				y + 1 < compsranges[currentcomp].ymin)
 				compsranges[currentcomp].ymin = y + 1;
 			if (compsranges[currentcomp].ymax == 0 ||
-				y > compsranges[currentcomp].ymax)
+				y + 1 > compsranges[currentcomp].ymax)
 				compsranges[currentcomp].ymax = y + 1;
 			compsranges[currentcomp].index = -1;
 
@@ -297,8 +318,8 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 		}
 	}
 
-	int minwidth=5;
-	int minheight=5;
+	int minwidth=2;
+	int minheight=2;
 	int maxwidth = 50;
 	int maxheight = 50;
 	int maxratio = 5;
@@ -317,6 +338,14 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 				newcolor = 0x000000;
 			if (compsranges[comp].ymax - compsranges[comp].ymin > maxheight)
 				newcolor = 0x000000;
+			if ((compsranges[comp].xmax - compsranges[comp].xmin < minwidth) &&
+				(compsranges[comp].ymax - compsranges[comp].ymin < minheight))
+				newcolor = 0x000000;
+			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
+				newcolor = 0x000000;
+			if (compsranges[comp].ymax - compsranges[comp].ymin < minheight)
+				newcolor = 0x000000;
+
 #if 0
 			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
 				newcolor = 0x000000;
@@ -330,8 +359,8 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 				newcolor = 0x000000;
 #endif
 			r = newcolor & 0xff;
-			g = (newcolor >> 8) & 0xff;
-			b = (newcolor >> 16) & 0xff;
+			g = 0x00; //(newcolor >> 8) & 0xff;
+			b = 0x00; // (newcolor >> 16) & 0xff;
 
 			*(outptr + xloc + yloc) = r;
 			*(outptr + xloc + yloc + 1) = g;
@@ -359,6 +388,11 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 			if ((compsranges[comp].xmax - compsranges[comp].xmin < minwidth) &&
 				(compsranges[comp].ymax - compsranges[comp].ymin < minheight))
 				continue;
+			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
+				continue;
+			if (compsranges[comp].ymax - compsranges[comp].ymin < minheight)
+				continue;
+
 			if (prevcomp != -1 && compsranges[comp].xmin - compsranges[prevcomp].xmax < maxdelta) {
 				// add to same set.
 				int index = compsranges[prevcomp].index;
@@ -378,24 +412,32 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 		}
 	}
 
+	NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
 	for(NSMutableSet* set in lines) {
 		// calculate bounding box for each set
 		int bbxmin=width, bbxmax=0, bbymin=height, bbymax=0;
 		for(NSValue* crval in set) {
 			comp_range comp;
 			[crval getValue:&comp];
-			if (comp.xmin < bbxmin) bbxmin = comp.xmin;
-			if (comp.ymin < bbymin) bbymin = comp.ymin;
-			if (comp.xmax > bbxmax) bbxmax = comp.xmax;
-			if (comp.ymax > bbymax) bbymax = comp.ymax;
+			if (comp.xmin < bbxmin) bbxmin = comp.xmin - 1;
+			if (comp.ymin < bbymin) bbymin = comp.ymin - 1;
+			if (comp.xmax > bbxmax) bbxmax = comp.xmax - 1;
+			if (comp.ymax > bbymax) bbymax = comp.ymax - 1;
 		}
 
 		if ((bbxmax - bbxmin < 10) &&
 			(bbymax - bbymin < 10))
 			continue;
 
-		// draw a blue bouding box
+		// store bounding box
+		bounding_box_t* bb = (bounding_box_t *)malloc(sizeof(bounding_box_t));
+		bb->xmin = bbxmin; bb->xmax = bbxmax; bb->ymin = bbymin; bb->ymax = bbymax;
+		NSValue *crval = [NSValue value:bb withObjCType:@encode(bounding_box_t)];
+		[bounding_boxes addObject:crval];
 
+		// TODO: cleanup all compranges in the set.
+
+		// draw a blue bounding box
 		for (int x = bbxmin; x < bbxmax; x++) {
 			int xloc = x * bitsPerPixel / 8;
 			// top
@@ -426,11 +468,15 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	}
 
 	printf("result\n");
+	return bounding_boxes;
 }
 
 - (void) awakeFromNib
 {
-	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863-800x600.JPG";
+	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/IMG_0002_treshold.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/radio days.jpg";
 //	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/frits_and_freddy.jpg";
 //  NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/a_single_man.jpg";
 	image = [[NSImage alloc] initWithContentsOfFile:imageName];
@@ -484,7 +530,8 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	int height = [inImageRep pixelsHigh];
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lumoutbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-
+    unsigned char histogram[256];
+    
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
 									 pixelsWide:[inImageRep pixelsWide]
@@ -502,8 +549,10 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 
 /*	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);*/
-	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    
+	rgb_convert_to_lum(inputImgBytes, lumbuf, histogram, width, height, bitsPerPixel);
+	binarization(lumbuf, lumbuf, histogram, width, height);
+    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage];
 }
@@ -514,7 +563,8 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
 	unsigned char* lumoutbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-
+    unsigned char histogram[256];
+    
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
 									 pixelsWide:[inImageRep pixelsWide]
@@ -530,9 +580,8 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-
-	filter_and_convert_to_gray(inputImgBytes, lumoutbuf, width, height, bitsPerPixel);
 #if 0
+	filter_and_convert_to_gray(inputImgBytes, lumoutbuf, width, height, bitsPerPixel);
 	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);
 //	binarization(outputImgBytes, outputImgBytes, width, height, bitsPerPixel);
 	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
@@ -552,7 +601,7 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	outputImg2Bytes = [outImage2Rep bitmapData];
 	NSImage* outImage2 = [[[NSImage alloc] init] autorelease];
 	[outImage2 addRepresentation:outImage2Rep];
-//	rgb_convert_to_lum(inputImgBytes, lumoutbuf, width, height, bitsPerPixel);
+	rgb_convert_to_lum(inputImgBytes, lumoutbuf, histogram, width, height, bitsPerPixel);
 	connected(lumoutbuf, outputImg2Bytes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage2];
@@ -564,23 +613,46 @@ void connected(unsigned char *inptr, unsigned char *outptr, int width, int heigh
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
 	int bytesPerRow = [inImageRep bytesPerRow];
-
+    unsigned char histogram[256];
+    
 	tessocr* ocr = [[tessocr alloc] init];
-
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-/*	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-*/
-	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 
-	char* text = [ocr run_tesseract:lumbuf
+	// not used for visualisation
+	NSBitmapImageRep *outImage2Rep = [[NSBitmapImageRep alloc]
+									  initWithBitmapDataPlanes:NULL
+									  pixelsWide:[inImageRep pixelsWide]
+									  pixelsHigh:[inImageRep pixelsHigh]
+									  bitsPerSample:[inImageRep bitsPerSample]
+									  samplesPerPixel:[inImageRep samplesPerPixel]
+									  hasAlpha:[inImageRep hasAlpha]
+									  isPlanar:[inImageRep isPlanar]
+									  colorSpaceName:[inImageRep colorSpaceName]
+									  bytesPerRow:[inImageRep bytesPerRow]
+									  bitsPerPixel:[inImageRep bitsPerPixel]];
+	outputImg2Bytes = [outImage2Rep bitmapData];
+
+
+//	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
+	rgb_convert_to_lum(inputImgBytes, lumbuf, histogram, width, height, bitsPerPixel);
+//    binarization(lumbuf, lumbuf, histogram, width, height);
+	NSArray* bounding_boxes = connected(lumbuf, outputImg2Bytes, width, height, bitsPerPixel);
+
+	for(NSValue* crval in bounding_boxes) {
+		bounding_box_t bb;
+		[crval getValue:&bb];
+		char* text = [ocr run_tesseract:lumbuf
 						bytes_per_pixel:1
-						bytes_per_line:width
-						width:width
-						height:height
-	 ];
-
-	NSString *str = [[NSString alloc] initWithUTF8String:text];
-	[lbl setStringValue:str];
+						 bytes_per_line:width
+								   left:bb.xmin
+									top:bb.ymin
+								  width:bb.xmax - bb.xmin
+								 height:bb.ymax - bb.ymin
+					  ];
+		printf("%s\n", text);
+	}
+//	NSString *str = [[NSString alloc] initWithUTF8String:text];
+//	[lbl setStringValue:str];
 }
 
 @end
