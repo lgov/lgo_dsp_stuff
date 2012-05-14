@@ -32,6 +32,27 @@ int LoG[9][9] = {
 	{ 1, 4, 5, 3, 0, 3, 5, 4, 1 },
 	{ 0, 1, 1, 2, 2, 2, 1, 1, 0 } };
 
+int Gaussian[5][5] = {
+    { 1, 4, 7, 4, 1 },
+    { 4, 16, 26, 16, 4 },
+    { 7, 26, 41, 26, 7 },
+    { 4, 16, 26, 16, 4 },
+    { 1, 4, 7, 4, 1 },
+};
+int GaussianDivider = 273;
+
+int SobelHorizontal[3][3] = {
+    { -1, 0, +1 },
+    { -2, 0, +2 },
+    { -1, 0, +1 },
+};
+
+int SobelVertical[3][3] = {
+    { -1, -2, -1 },
+    {  0,  0,  0 },
+    { +1, +2, +1 },
+};
+
 typedef struct {
 	short int xmin;
 	short int ymin;
@@ -61,11 +82,22 @@ void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
 	}
 }
 
-void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
-						unsigned char *histogram, int width, int height, int bitsPerPixel)
+void histogram(unsigned char *inbuf, unsigned int *histogram, int width, int height)
 {
-    memset(histogram, 0, 256);
-    
+    memset(histogram, 0, 256 * sizeof(unsigned int));
+
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			unsigned char *curin = inbuf + y * width + x;
+
+            (*(histogram+(unsigned int)*curin))++;
+        }
+    }
+}
+
+void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
+						int width, int height, int bitsPerPixel)
+{    
 	int rowPixels = width * bitsPerPixel / 8;
     
 	for (int y = 0; y < height; y++) {
@@ -77,15 +109,11 @@ void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
             
 			unsigned char *curin = inbuf + yloc + xloc;
             
-			unsigned char r = *curin++,
-            g = *curin++,
-            b = *curin++;
+			unsigned char r = *curin++, g = *curin++, b = *curin++;
 			// calculate luminance from rgb
 			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
             
 			*lumptr++ = lum; // r
-            
-            (*(histogram+(unsigned char)lum))++;
 		}
 	}
 }
@@ -94,8 +122,9 @@ void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
 // outptr points to x,y point in output buffer.
 void convolution(unsigned char *lumin, int *outptr,
                  int x, int y,
-                 int width, int height, int bitsPerPixel,
+                 int width, int height,
                  int *matrix, int matrixSize,
+                 int matrix_divider,
                  int *min, int *max)
 {
 	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
@@ -105,11 +134,11 @@ void convolution(unsigned char *lumin, int *outptr,
 	// calculate convolution of one pixel!
 	for (int i = 0; i < matrixSize; i++) {
 		int yloc = (y + (i - offset)) * width;
-		if (yloc < 0) continue;
+		if (yloc < 0 || (y + (i - offset)) >= height) continue;
         
 		for (int j= 0; j < matrixSize; j++) {
 			int xloc = x + (j - offset);
-			if (xloc < 0) continue;
+			if (xloc < 0 || (x + (j - offset)) >= width) continue;
             
 			incur = lumin + yloc + xloc;
 			int m = *(matrix + (i * matrixSize) + j);
@@ -117,12 +146,44 @@ void convolution(unsigned char *lumin, int *outptr,
 		}
 	}
     
+    lum /= matrix_divider;
+    
 	// calculate luminance from rgb
 	if (lum < *min)
 		*min = lum;
 	if (lum > *max)
 		*max = lum;
 	*outptr = lum;
+}
+
+void convolution_in_range(unsigned char *lumin, unsigned char *lumout,
+                          int x, int y,
+                          int width, int height,
+                          int *matrix, int matrixSize,
+                          int matrix_divider)
+{
+	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
+	unsigned char *incur;
+    int lum = 0;
+    
+	// calculate convolution of one pixel!
+	for (int i = 0; i < matrixSize; i++) {
+		int yloc = (y + (i - offset)) * width;
+		if (yloc < 0 || (y + (i - offset)) >= height) continue;
+        
+		for (int j= 0; j < matrixSize; j++) {
+			int xloc = x + (j - offset);
+			if (xloc < 0 || (x + (j - offset)) >= width) continue;
+            
+			incur = lumin + yloc + xloc;
+			int m = *(matrix + (i * matrixSize) + j);
+			lum += (int)*incur * m;
+		}
+	}
+    
+    lum /= matrix_divider;
+    
+	*lumout = lum;
 }
 
 void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
@@ -133,16 +194,16 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 	int* lumptr;
 	int min = 0, max = 0;
 	unsigned char *curout;
-    unsigned char histogram[256];
+    unsigned int histogram[256];
     
-    rgb_convert_to_lum(inbuf, lumin, histogram, width, height, bitsPerPixel);
+    rgb_convert_to_lum(inbuf, lumin, width, height, bitsPerPixel);
     
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			lumptr = lumbuf + y * width + x;
 			convolution(lumin, lumptr,
-                        x, y, width, height, bitsPerPixel,
-                        (int*)LoG, 9,
+                        x, y, width, height,
+                        (int*)sharpen, 3, 1,
                         &min, &max);
 		}
 	}
@@ -164,21 +225,66 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 	}
 }
 
+void gaussian_blur(unsigned char *inlum, unsigned char *outlum,
+                   int width, int height)
+{
+    unsigned char *lumptr;
+
+ 	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			lumptr = outlum + y * width + x;
+			convolution_in_range(inlum, lumptr,
+                                 x, y, width, height,
+                                 (int*)Gaussian, 5, GaussianDivider);
+		}
+	}
+}
+
+void sobel_edge_detection(unsigned char *inlum, unsigned char *outlum,
+                          int width, int height)
+{
+    int lumx, lumy, lumsum;
+	int min = 0, max = 0;
+    unsigned char *lumptr;
+
+ 	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			lumptr = outlum + y * width + x;
+			convolution(inlum, &lumy,
+                        x, y, width, height,
+                        (int*)SobelVertical, 3, 1,
+                        &min, &max);
+
+			convolution(inlum, &lumx,
+                        x, y, width, height,
+                        (int*)SobelHorizontal, 3, 1,
+                        &min, &max);
+            
+            lumsum = abs(lumx) + abs(lumy);
+            if (lumsum > 255) lumsum = 255;
+            if (lumsum < 0) lumsum = 0;
+            
+            *lumptr = (unsigned char)lumsum;
+		}
+	}
+ }
+
 /* currently based on tresholds recovered from the histogram of the image. */
-void binarization(unsigned char *inlum, unsigned char *outlum, unsigned char *historgram, 
+void binarization(unsigned char *inlum, unsigned char *outlum,
                   int width, int height)
 {
 	unsigned char *curin, *curout;
-
+    
     // calculate tresholds
+#if 0    
     unsigned char ranges[100] = { 0, 8, 21, 105, 120, 251, 255 };
     unsigned char color_per_range[100] = { 0, 64, 0, 128, 0, 255 };
     int nr_of_ranges = 6;
-#if 0
+#endif
+
     unsigned char ranges[100] = { 0, 251, 255 };
     unsigned char color_per_range[100] = { 0, 255 };
-    int nr_of_ranges = 6;
-#endif
+    int nr_of_ranges = 2;
     
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
@@ -499,7 +605,9 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
+    unsigned char* lumtemp = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned int histbuf[256];
 
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
@@ -516,7 +624,11 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
+	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
+	gaussian_blur(lumbuf, lumtemp, width, height);
+    sobel_edge_detection(lumtemp, lumbuf, width, height);
+//	histogram(lumbuf, histbuf, width, height);
+    binarization(lumbuf, lumbuf, width, height);
 	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage];
@@ -529,8 +641,6 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-	unsigned char* lumoutbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    unsigned char histogram[256];
     
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
@@ -550,10 +660,10 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 /*	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);*/
     
-	rgb_convert_to_lum(inputImgBytes, lumbuf, histogram, width, height, bitsPerPixel);
-	binarization(lumbuf, lumbuf, histogram, width, height);
+	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
+	gaussian_blur(lumbuf, lumbuf, width, height);
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-
+    
 	[imageView setImage:outImage];
 }
 
@@ -562,8 +672,10 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
-	unsigned char* lumoutbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    unsigned char histogram[256];
+	unsigned char* lumtemp = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
+    unsigned int histogram[256];
     
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
@@ -580,13 +692,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-#if 0
-	filter_and_convert_to_gray(inputImgBytes, lumoutbuf, width, height, bitsPerPixel);
-	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);
-//	binarization(outputImgBytes, outputImgBytes, width, height, bitsPerPixel);
-	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-#endif
-
+    
 	NSBitmapImageRep *outImage2Rep = [[NSBitmapImageRep alloc]
 									  initWithBitmapDataPlanes:NULL
 									  pixelsWide:[inImageRep pixelsWide]
@@ -601,8 +707,14 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	outputImg2Bytes = [outImage2Rep bitmapData];
 	NSImage* outImage2 = [[[NSImage alloc] init] autorelease];
 	[outImage2 addRepresentation:outImage2Rep];
-	rgb_convert_to_lum(inputImgBytes, lumoutbuf, histogram, width, height, bitsPerPixel);
-	connected(lumoutbuf, outputImg2Bytes, width, height, bitsPerPixel);
+    
+	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
+	gaussian_blur(lumbuf, lumtemp, width, height);
+    sobel_edge_detection(lumtemp, lumbuf, width, height);
+    //	histogram(lumbuf, histbuf, width, height);
+    binarization(lumbuf, lumbuf, width, height);
+	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    connected(lumbuf, outputImg2Bytes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage2];
 }
@@ -613,7 +725,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
 	int bytesPerRow = [inImageRep bytesPerRow];
-    unsigned char histogram[256];
+    unsigned int histogram[256];
     
 	tessocr* ocr = [[tessocr alloc] init];
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -634,7 +746,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 
 
 //	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-	rgb_convert_to_lum(inputImgBytes, lumbuf, histogram, width, height, bitsPerPixel);
+	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 //    binarization(lumbuf, lumbuf, histogram, width, height);
 	NSArray* bounding_boxes = connected(lumbuf, outputImg2Bytes, width, height, bitsPerPixel);
 
