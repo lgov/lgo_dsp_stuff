@@ -10,6 +10,7 @@
 #import "tessocr.h"
 #include <Accelerate/Accelerate.h>
 #include "stdlib.h"
+#include <math.h>
 
 @implementation dsptestview
 
@@ -52,13 +53,6 @@ int SobelVertical[3][3] = {
     {  0,  0,  0 },
     { +1, +2, +1 },
 };
-
-typedef struct {
-	short int xmin;
-	short int ymin;
-	short int xmax;
-	short int ymax;
-} bounding_box_t;
 
 void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
 						int width, int height, int bitsPerPixel)
@@ -342,11 +336,230 @@ void prepare(unsigned char *inlum, unsigned char *outlum, int width, int height,
 
 typedef struct {
 	short int xmin;
+	short int xmax;
+	short int y;
+} conn_line_t;
+
+typedef struct {
+	short int xmin;
+	short int xmax;
+	short int ymin;
+    short int ymax;
+} conn_box_t;
+
+// merge a set of lines in an existing set if connected. Add as new if no connection found.
+void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelta, short int max_ydelta, bool merge_lines)
+{
+	for(NSMutableArray* list in bounding_boxes) {
+		// find component connected with our new component
+        
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+        
+        NSValue* bbnewval = [newlist objectAtIndex:0];
+        conn_box_t newbox;
+        [bbnewval getValue:&newbox];
+        
+        // iff bounding boxes overlap, check the individual lines.
+        if ((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) ||
+            (box.ymax >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
+            (box.ymin >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
+            (box.ymin <= newbox.ymin-max_ydelta && box.ymax >= newbox.ymax+max_ydelta)) {
+            if ((box.xmin >= newbox.xmin-max_xdelta && box.xmin <= newbox.xmax+max_xdelta) ||
+                (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
+                (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
+                (box.xmin <= newbox.xmin-max_xdelta && box.xmax >= newbox.xmax+max_xdelta)) {
+
+                if (!merge_lines) {
+                    box.xmin = std::min(box.xmin, newbox.xmin);
+                    box.ymin = std::min(box.ymin, newbox.ymin);
+                    box.xmax = std::max(box.xmax, newbox.xmax);
+                    box.ymax = std::max(box.ymax, newbox.ymax);
+                    
+                    NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
+                    [list replaceObjectAtIndex:0 withObject:new_bboxval];
+
+                    // add all but the first element.
+                    NSRange theRange;
+                    theRange.location = 1;
+                    theRange.length = [newlist count] -1;
+                    [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
+
+                    return;
+                }
+            
+                for(NSValue* crval in list) {
+                    if (bbval == crval) // skip first element.
+                        continue;
+                    
+                    conn_line_t comp;
+                    [crval getValue:&comp];
+                    
+                    for(NSValue* newval in newlist) {
+                        conn_line_t newcomp;
+                        [newval getValue:&newcomp];
+                        
+                        // lines connected?
+                        if (comp.y >= newcomp.y-max_ydelta && comp.y <= newcomp.y+max_ydelta) {
+                            if ((comp.xmin >= newcomp.xmin-max_xdelta && comp.xmin <= newcomp.xmax+max_xdelta) ||
+                                (comp.xmax >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
+                                (comp.xmin >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
+                                (comp.xmin <= newcomp.xmin-max_xdelta && comp.xmax >= newcomp.xmax+max_xdelta)) {
+                                // yes
+                                box.xmin = std::min(box.xmin, newbox.xmin);
+                                box.ymin = std::min(box.ymin, newbox.ymin);
+                                box.xmax = std::max(box.xmax, newbox.xmax);
+                                box.ymax = std::max(box.ymax, newbox.ymax);
+
+                                NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
+                                [list replaceObjectAtIndex:0 withObject:new_bboxval];
+
+                                // add all but the first element.
+                                NSRange theRange;
+                                theRange.location = 1;
+                                theRange.length = [newlist count] -1;
+                                [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
+                                
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    [bounding_boxes addObject:newlist];
+}
+
+NSArray* connected_binary(unsigned char *inptr, int width, int height)
+{
+	unsigned char* cur;
+	int curcolor;
+    conn_line_t *cur_line = 0l;
+
+    NSMutableArray* lines = [[NSMutableArray alloc] init];
+
+    // colors should be either 0 (OFF) or 255 (ON). Use <128 or >= 128 as check just to be sure.
+    
+	// find horizontal lines of ON pixels
+    for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width;) {
+            for (cur = inptr + y * width + x ; x < width && (*cur++) >= 128 ; x++) {
+                if (!cur_line) {
+                    cur_line = (conn_line_t *)malloc(sizeof(conn_line_t));
+                    
+                    cur_line->y = y;
+                    cur_line->xmin = cur_line->xmax = x;
+                } else {
+                    cur_line->xmax = x;
+                }
+            }
+            if (cur_line) {
+                // store cur_line, merge with previous lines if possible
+                NSMutableArray *newcomp = [[NSMutableArray alloc] init];
+                
+                conn_box_t *cur_bbox = (conn_box_t *)malloc(sizeof(conn_box_t));
+                cur_bbox->xmin = cur_line->xmin; cur_bbox->xmax = cur_line->xmax; cur_bbox->ymin = cur_bbox->ymax = cur_line->y;
+                NSValue *cur_bboxval = [[NSValue alloc] initWithBytes:&(*cur_bbox) objCType:@encode(conn_box_t)];
+                [newcomp addObject:cur_bboxval];
+                
+                NSValue *cur_lineval = [[NSValue alloc] initWithBytes:&(*cur_line) objCType:@encode(conn_line_t)];
+                [newcomp addObject:cur_lineval];
+                
+                merge(lines, newcomp, 1, 1, TRUE);
+                cur_line = 0l;
+            } else {
+                x++; // skip an OFF pixel
+            }
+        }
+    }
+
+    int size = [lines count], prev_size = 0;
+    bool first_run = TRUE;
+    
+    while (size != prev_size && size != 1)
+    {
+        prev_size = size;
+        
+        NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
+        for(NSArray* list in lines) {
+            NSValue* bbval = [list objectAtIndex:0];
+            conn_box_t box;
+            [bbval getValue:&box];
+
+#if 0
+            // skip too small
+            if ((box.xmax - box.xmin < 10) &&
+                (box.ymax - box.ymin < 10))
+                continue;
+#endif
+            if (first_run) {
+                if ((box.xmax - box.xmin > 50) ||
+                    (box.ymax - box.ymin > 50))
+                    continue;
+            }
+
+            
+            merge(bounding_boxes, list, 50, 10, FALSE);
+        }
+        lines = bounding_boxes;
+        size = [lines count];
+        first_run = FALSE;
+    }
+    
+	return lines;
+}
+
+void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
+                         int width, int height, int bitsPerPixel)
+{
+    for(NSArray* list in lines) {
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+            
+		// TODO: cleanup all compranges in the set.
+        
+		// draw a blue bounding box
+		for (int x = box.xmin; x < box.xmax; x++) {
+			int xloc = x * bitsPerPixel / 8;
+			// top
+			int yloc = box.ymin * width * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+			// bottom
+			yloc = box.ymax * width * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+		}
+        
+		for (int y = box.ymin; y < box.ymax; y++) {
+			int yloc = y * width * bitsPerPixel / 8;
+            
+			int xloc = box.xmin * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+            
+			xloc = box.xmax * bitsPerPixel / 8;
+			*(outptr + xloc + yloc) = 0;
+			*(outptr + xloc + yloc + 1) = 0;
+			*(outptr + xloc + yloc + 2) = 255;
+		}
+	}
+}
+
+typedef struct {
+	short int xmin;
 	short int ymin;
 	short int xmax;
 	short int ymax;
 	int index;
-} comp_range;
+} comp_range_t;
 
 NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
 {
@@ -357,8 +570,8 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int prevx, prevy;
 	int* comps = (int*)malloc(width * height * sizeof(int));
 
-	comp_range* compsranges = (comp_range*)malloc(width * height *
-												  sizeof(comp_range));
+	comp_range_t* compsranges = (comp_range_t*)malloc(width * height *
+												  sizeof(comp_range_t));
 
 	int currentcomp=0;
 	int maxcomp = 0;
@@ -504,13 +717,13 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 				int index = compsranges[prevcomp].index;
 				compsranges[comp].index = index;
 				NSMutableSet *line = [lines objectAtIndex:index];
-				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range)];
+				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range_t)];
 				[line addObject:crval];
 			} else {
 				// add to new set.
 				NSMutableSet *newline = [[NSMutableSet alloc] init];
 				compsranges[comp].index = [lines count]; // current index = (current array size++) - 1
-				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range)];
+				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range_t)];
 				[newline addObject:crval];
 				[lines addObject:newline];
 			}
@@ -523,7 +736,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 		// calculate bounding box for each set
 		int bbxmin=width, bbxmax=0, bbymin=height, bbymax=0;
 		for(NSValue* crval in set) {
-			comp_range comp;
+			comp_range_t comp;
 			[crval getValue:&comp];
 			if (comp.xmin < bbxmin) bbxmin = comp.xmin - 1;
 			if (comp.ymin < bbymin) bbymin = comp.ymin - 1;
@@ -536,9 +749,9 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 			continue;
 
 		// store bounding box
-		bounding_box_t* bb = (bounding_box_t *)malloc(sizeof(bounding_box_t));
+		conn_box_t* bb = (conn_box_t *)malloc(sizeof(conn_box_t));
 		bb->xmin = bbxmin; bb->xmax = bbxmax; bb->ymin = bbymin; bb->ymax = bbymax;
-		NSValue *crval = [NSValue value:bb withObjCType:@encode(bounding_box_t)];
+		NSValue *crval = [NSValue value:bb withObjCType:@encode(conn_box_t)];
 		[bounding_boxes addObject:crval];
 
 		// TODO: cleanup all compranges in the set.
@@ -579,8 +792,8 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 
 - (void) awakeFromNib
 {
-	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
+//	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
+    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/IMG_0002_treshold.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/radio days.jpg";
 //	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/frits_and_freddy.jpg";
@@ -672,6 +885,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
+    unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lumtemp = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
@@ -692,31 +906,21 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-    
-	NSBitmapImageRep *outImage2Rep = [[NSBitmapImageRep alloc]
-									  initWithBitmapDataPlanes:NULL
-									  pixelsWide:[inImageRep pixelsWide]
-									  pixelsHigh:[inImageRep pixelsHigh]
-									  bitsPerSample:[inImageRep bitsPerSample]
-									  samplesPerPixel:[inImageRep samplesPerPixel]
-									  hasAlpha:[inImageRep hasAlpha]
-									  isPlanar:[inImageRep isPlanar]
-									  colorSpaceName:[inImageRep colorSpaceName]
-									  bytesPerRow:[inImageRep bytesPerRow]
-									  bitsPerPixel:[inImageRep bitsPerPixel]];
-	outputImg2Bytes = [outImage2Rep bitmapData];
-	NSImage* outImage2 = [[[NSImage alloc] init] autorelease];
-	[outImage2 addRepresentation:outImage2Rep];
-    
-	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-	gaussian_blur(lumbuf, lumtemp, width, height);
-    sobel_edge_detection(lumtemp, lumbuf, width, height);
+    rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+	
+    // localize text
+    gaussian_blur(lumin, lumbuf, width, height);
+    sobel_edge_detection(lumbuf, lumtemp, width, height);
     //	histogram(lumbuf, histbuf, width, height);
-    binarization(lumbuf, lumbuf, width, height);
-	lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-    connected(lumbuf, outputImg2Bytes, width, height, bitsPerPixel);
+    binarization(lumtemp, lumtemp, width, height);
 
-	[imageView setImage:outImage2];
+    NSArray *bounding_boxes = connected_binary(lumtemp, width, height);
+	
+    // draw bounding boxes on screen.
+    lum_convert_to_rgb(lumin, outputImgBytes, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel); 
+    
+	[imageView setImage:outImage];
 }
 
 - (IBAction)ocr:(id)sender
@@ -751,7 +955,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	NSArray* bounding_boxes = connected(lumbuf, outputImg2Bytes, width, height, bitsPerPixel);
 
 	for(NSValue* crval in bounding_boxes) {
-		bounding_box_t bb;
+		conn_box_t bb;
 		[crval getValue:&bb];
 		char* text = [ocr run_tesseract:lumbuf
 						bytes_per_pixel:1
