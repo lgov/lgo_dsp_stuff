@@ -273,6 +273,8 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
                           int width, int height, int bitsperpixel)
 {
     unsigned char* templum = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned char* gradiants = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned char* strengths = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
     // step 1: gaussian blur
     gaussian_blur(inlum, templum, width, height);
@@ -280,11 +282,14 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
     // step 2: sobel horizontal & vertical edge filtering
     int Gx, Gy, strength;
 	int min = 0, max = 0;
-    unsigned char *outptr;
+    unsigned char *outptr, *strengthptr, *gradptr;
     
  	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			outptr = outbuf + y * (width * bitsperpixel / 8) + x * (bitsperpixel / 8);
+            strengthptr = strengths + y * width + x;
+            gradptr = gradiants + y * width + x;
+            
 			convolution(inlum, &Gy,
                         x, y, width, height,
                         (int*)SobelVertical, 3, 1,
@@ -300,9 +305,8 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
             if (strength > 255) strength = 255;
             if (strength < 0) strength = 0;
             
-            if (strength > 128) {
-                
-                double edge_dir;
+            double edge_dir;
+            if (strength > 128) {                
                 // edge direction
                 if (Gx == 0 && Gy == 0) {
                     edge_dir = 0;
@@ -327,12 +331,63 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
                     *outptr++ = 255; *outptr++ = 0; *outptr++ = 0; *outptr = 0; // red
                 }
             } else {
+                edge_dir = 255;
                 *outptr++ = 0; *outptr++ = 0; *outptr++ = 0; *outptr = 0;
             }
+
+            *strengthptr = strength;
+            *gradptr = (int)edge_dir;
 		}
 	}
+
+    // step 3: non-maximum suppression
+    for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+            strengthptr = strengths + y * width + x;
+            gradptr = gradiants + y * width + x;
+			outptr = outbuf + y * (width * bitsperpixel / 8) + x * (bitsperpixel / 8);
+
+            switch (*gradptr) {
+                case 0: {
+                    unsigned char *strength_top = strengths + (y-1) * width + x;
+                    unsigned char *strength_bottom = strengths + (y+1) * width + x;
+                    strength = *strength_bottom > *strength_top ? *strength_bottom : *strength_top;
+                    break;
+                }
+                    
+                case 45: {
+                    unsigned char *strength_righttop = strengths + (y-1) * width + x + 1;
+                    unsigned char *strength_leftbottom = strengths + (y+1) * width + x - 1;
+                    strength = *strength_leftbottom > *strength_righttop ? *strength_leftbottom : *strength_righttop;
+                    break;
+                }
+                    
+                case 90: {
+                    unsigned char *strength_left = strengths + y * width + x - 1;
+                    unsigned char *strength_right = strengths + y * width + x + 1;
+                    strength = *strength_right > *strength_left ? *strength_right : *strength_left;
+                    break;
+                }
+                    
+                case 135: {
+                    unsigned char *strength_lefttop = strengths + (y-1) * width + x - 1;
+                    unsigned char *strength_rightbottom = strengths + (y+1) * width + x + 1;
+                    strength = *strength_rightbottom > *strength_lefttop ? *strength_rightbottom : *strength_lefttop;
+                    break;
+                }
+                    
+                default:
+                    break;
+            }
+            if (*strengthptr <= strength) {
+                *strengthptr = 0;
+                *outptr++ = 0; *outptr++ = 0; *outptr++ = 0; *outptr = 0;
+            }
+            
+        }
+    }
     
-    // step 3: 
+    
     free(templum);
 }
 void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
@@ -993,8 +1048,8 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 
 - (void) awakeFromNib
 {
-    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
+    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/el_secreto_de_sus_ojos.JPG";
 //	 NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
