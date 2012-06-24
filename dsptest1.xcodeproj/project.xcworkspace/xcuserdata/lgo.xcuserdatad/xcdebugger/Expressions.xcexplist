@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "-[dsptestview ocr:]:dsptestview.mm">
+      </ContextState>
+      <ContextState
+         contextName = "binarization(unsigned char*, unsigned char*, int, int, int, int, int, int):dsptestview.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "(y + intop) * width + (x + inleft)">
+            </PersistentString>
+            <PersistentString
+               value = "(y + outtop) * width + (x + outleft)">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "connected_binary(unsigned char*, int, int):dsptestview.mm">
+      </ContextState>
+      <ContextState
+         contextName = "merge(NSMutableArray*, NSArray*, short, short, bool):dsptestview.mm">
+      </ContextState>
+      <ContextState
+         contextName = "-[dsptestview calcEdges:]:dsptestview.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "[inImageRep bitsPerPixel]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "binarization_bounding_boxes(unsigned char*, unsigned char*, NSArray*, int, int):dsptestview.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "box.xmax - box.xmin-300">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "binarization(unsigned char*, unsigned char*, int, int, int, int, int, int, int, int):dsptestview.mm">
+      </ContextState>
+      <ContextState
+         contextName = "sobel_edge_detection(unsigned char*, unsigned char*, int, int):dsptestview.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "(int)edge_dir">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "histogram_bounding_boxes(unsigned char*, NSArray*, unsigned int*, int, int):dsptestview.mm">
+         <PersistentStrings>
+            <PersistentString
+               value = "(int)*curin">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>

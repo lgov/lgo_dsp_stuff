@@ -58,16 +58,16 @@ void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
 						int width, int height, int bitsPerPixel)
 {
 	int rowPixels = width * bitsPerPixel / 8;
-    
+
 	for (int y = 0; y < height; y++) {
 		int yloc = y * rowPixels;
 		unsigned char *lumptr = lumbuf + y * width;
-        
+
 		for (int x = 0; x < width; x++) {
 			int xloc = x * bitsPerPixel / 8;
-            
+
 			unsigned char *curout = outbuf + yloc + xloc;
-            
+
 			*curout++ = *lumptr; // r
 			*curout++ = *lumptr; // g
 			*curout++ = *lumptr++; // b
@@ -76,7 +76,7 @@ void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
 	}
 }
 
-void histogram(unsigned char *inbuf, unsigned int *histogram, 
+void histogram(unsigned char *inbuf, unsigned int *histogram,
                int inleft, int intop,
                int inwidth,
                int boxwidth, int boxheight)
@@ -94,7 +94,30 @@ void histogram(unsigned char *inbuf, unsigned int *histogram,
 
 void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
 						int width, int height, int bitsPerPixel)
-{    
+{
+	int rowPixels = width * bitsPerPixel / 8;
+
+	for (int y = 0; y < height; y++) {
+		int yloc = y * rowPixels;
+		unsigned char *lumptr = lumbuf + y * width;
+
+		for (int x = 0; x < width; x++) {
+			int xloc = x * bitsPerPixel / 8;
+
+			unsigned char *curin = inbuf + yloc + xloc;
+
+			unsigned char r = *curin++, g = *curin++, b = *curin++;
+			// calculate luminance from rgb
+			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
+
+			*lumptr++ = lum; // r
+		}
+	}
+}
+
+void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
+                                int width, int height, int bitsPerPixel, int treshold)
+{
 	int rowPixels = width * bitsPerPixel / 8;
     
 	for (int y = 0; y < height; y++) {
@@ -107,10 +130,14 @@ void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
 			unsigned char *curin = inbuf + yloc + xloc;
             
 			unsigned char r = *curin++, g = *curin++, b = *curin++;
+            
 			// calculate luminance from rgb
 			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
             
-			*lumptr++ = lum; // r
+            if (lum > treshold)
+                *lumptr++ = 255;
+            else
+                *lumptr++ = 0;
 		}
 	}
 }
@@ -127,24 +154,24 @@ void convolution(unsigned char *lumin, int *outptr,
 	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
 	unsigned char *incur;
     int lum = 0;
-    
+
 	// calculate convolution of one pixel!
 	for (int i = 0; i < matrixSize; i++) {
 		int yloc = (y + (i - offset)) * width;
 		if (yloc < 0 || (y + (i - offset)) >= height) continue;
-        
+
 		for (int j= 0; j < matrixSize; j++) {
 			int xloc = x + (j - offset);
 			if (xloc < 0 || (x + (j - offset)) >= width) continue;
-            
+
 			incur = lumin + yloc + xloc;
 			int m = *(matrix + (i * matrixSize) + j);
 			lum += (int)*incur * m;
 		}
 	}
-    
+
     lum /= matrix_divider;
-    
+
 	if (lum < *min)
 		*min = lum;
 	if (lum > *max)
@@ -161,24 +188,24 @@ void convolution_in_range(unsigned char *lumin, unsigned char *lumout,
 	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
 	unsigned char *incur;
     int lum = 0;
-    
+
 	// calculate convolution of one pixel!
 	for (int i = 0; i < matrixSize; i++) {
 		int yloc = (y + (i - offset)) * width;
 		if (yloc < 0 || (y + (i - offset)) >= height) continue;
-        
+
 		for (int j= 0; j < matrixSize; j++) {
 			int xloc = x + (j - offset);
 			if (xloc < 0 || (x + (j - offset)) >= width) continue;
-            
+
 			incur = lumin + yloc + xloc;
 			int m = *(matrix + (i * matrixSize) + j);
 			lum += (int)*incur * m;
 		}
 	}
-    
+
     lum /= matrix_divider;
-    
+
 	*lumout = lum;
 }
 
@@ -191,9 +218,9 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 	int min = 0, max = 0;
 	unsigned char *curout;
     unsigned int histogram[256];
-    
+
     rgb_convert_to_lum(inbuf, lumin, width, height, bitsPerPixel);
-    
+
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			lumptr = lumbuf + y * width + x;
@@ -203,9 +230,9 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
                         &min, &max);
 		}
 	}
-    
+
 	// minimum and maximum luminance is stored in min and max respectively.
-    
+
 	// copy intermediate luminance buffer to output luminance buffer,
 	// adapt values to range.
 	for (int y = 0; y < height; y++) {
@@ -213,9 +240,9 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 			lumptr = lumbuf + y * width + x;
 			int lum = *lumptr;
 			float gray = ((lum - min) / ((max - min)/255));
-            
+
 			curout = outbuf + y * width + x;
-            
+
 			*curout++ = (unsigned char)gray;
 		}
 	}
@@ -257,12 +284,12 @@ void sobel_edge_detection(unsigned char *inlum, unsigned char *outlum,
                         x, y, width, height,
                         (int*)SobelHorizontal, 3, 1,
                         &min, &max);
-            
+
             // edge strength
             lumsum = sqrt(lumx * lumx + lumy * lumy);
             if (lumsum > 255) lumsum = 255;
             if (lumsum < 0) lumsum = 0;
-            
+
             *lumptr = lumsum;
 		}
 	}
@@ -276,57 +303,59 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
     unsigned char* gradiants = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* strengths = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
+    // possible method to choose tresholds:
+    // http://www.kerrywong.com/2009/05/07/canny-edge-detection-auto-thresholding/
+    int low_treshold = 80;
+	int high_treshold = 200;
+
     // step 1: gaussian blur
     gaussian_blur(inlum, templum, width, height);
-    
+
     // step 2: sobel horizontal & vertical edge filtering
     int Gx, Gy, strength;
 	int min = 0, max = 0;
     unsigned char *outptr, *strengthptr, *gradptr;
-    
+
  	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 			outptr = outbuf + y * (width * bitsperpixel / 8) + x * (bitsperpixel / 8);
             strengthptr = strengths + y * width + x;
             gradptr = gradiants + y * width + x;
-            
+
 			convolution(inlum, &Gy,
                         x, y, width, height,
                         (int*)SobelVertical, 3, 1,
                         &min, &max);
-            
+
 			convolution(inlum, &Gx,
                         x, y, width, height,
                         (int*)SobelHorizontal, 3, 1,
                         &min, &max);
-            
+
             // edge strength
             strength = sqrt(Gx * Gx + Gy * Gy);
             if (strength > 255) strength = 255;
             if (strength < 0) strength = 0;
-            
+
             double edge_dir;
-            if (strength > 128) {                
+            if (strength > low_treshold) {
                 // edge direction
                 if (Gx == 0 && Gy == 0) {
                     edge_dir = 0;
                 }
                 edge_dir = atan2(Gx, Gy) * 180 / PI;
-                
+
                 // assign edge to range
                 if (((edge_dir < 22.5) && (edge_dir > -22.5)) || (edge_dir > 157.5) || (edge_dir < -157.5)) {
                     edge_dir = 0;
                     *outptr++ = 255; *outptr++ = 255; *outptr++ = 0; *outptr = 0; // yellow
-                }
-                if (((edge_dir > 22.5) && (edge_dir < 67.5)) || ((edge_dir < -112.5) && (edge_dir > -157.5))) {
+                } else if (((edge_dir > 22.5) && (edge_dir < 67.5)) || ((edge_dir < -112.5) && (edge_dir > -157.5))) {
                     edge_dir = 45;
                     *outptr++ = 0; *outptr++ = 255; *outptr++ = 0; *outptr = 0; // green
-                }
-                if (((edge_dir > 67.5) && (edge_dir < 112.5)) || ((edge_dir < -67.5) && (edge_dir > -112.5))) {
+                } else if (((edge_dir > 67.5) && (edge_dir < 112.5)) || ((edge_dir < -67.5) && (edge_dir > -112.5))) {
                     edge_dir = 90;
                     *outptr++ = 0; *outptr++ = 0; *outptr++ = 255; *outptr = 0; // blue
-                }
-                if (((edge_dir > 112.5) && (edge_dir < 157.5)) || ((edge_dir < -22.5) && (edge_dir > -67.5))) {
+                } else if (((edge_dir > 112.5) && (edge_dir < 157.5)) || ((edge_dir < -22.5) && (edge_dir > -67.5))) {
                     edge_dir = 135;
                     *outptr++ = 255; *outptr++ = 0; *outptr++ = 0; *outptr = 0; // red
                 }
@@ -341,8 +370,8 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
 	}
 
     // step 3: non-maximum suppression
-    for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
+    for (int y = 1; y < height - 1; y++) {
+		for (int x = 1; x < width -1; x++) {
             strengthptr = strengths + y * width + x;
             gradptr = gradiants + y * width + x;
 			outptr = outbuf + y * (width * bitsperpixel / 8) + x * (bitsperpixel / 8);
@@ -354,28 +383,28 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
                     strength = *strength_bottom > *strength_top ? *strength_bottom : *strength_top;
                     break;
                 }
-                    
+
                 case 45: {
                     unsigned char *strength_righttop = strengths + (y-1) * width + x + 1;
                     unsigned char *strength_leftbottom = strengths + (y+1) * width + x - 1;
                     strength = *strength_leftbottom > *strength_righttop ? *strength_leftbottom : *strength_righttop;
                     break;
                 }
-                    
+
                 case 90: {
                     unsigned char *strength_left = strengths + y * width + x - 1;
                     unsigned char *strength_right = strengths + y * width + x + 1;
                     strength = *strength_right > *strength_left ? *strength_right : *strength_left;
                     break;
                 }
-                    
+
                 case 135: {
                     unsigned char *strength_lefttop = strengths + (y-1) * width + x - 1;
                     unsigned char *strength_rightbottom = strengths + (y+1) * width + x + 1;
                     strength = *strength_rightbottom > *strength_lefttop ? *strength_rightbottom : *strength_lefttop;
                     break;
                 }
-                    
+
                 default:
                     break;
             }
@@ -383,11 +412,84 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
                 *strengthptr = 0;
                 *outptr++ = 0; *outptr++ = 0; *outptr++ = 0; *outptr = 0;
             }
-            
+
         }
     }
-    
-    
+
+    // step 4: tresholding +
+    // step 5: edge tracking by hysteris: following the edge, enhance all edges above the low threshold.
+    int nr_iters = 10;
+    for (int i = 0; i < nr_iters; i++) {
+        for (int y = 1; y < height - 1; y++) {
+            for (int x = 1; x < width -1; x++) {
+                strengthptr = strengths + y * width + x;
+                gradptr = gradiants + y * width + x;
+                outptr = outbuf + y * (width * bitsperpixel / 8) + x * (bitsperpixel / 8);
+                
+                if (*strengthptr < low_treshold) {
+                    strength = 0;
+                } else if (*strengthptr > high_treshold) {
+                    strength = 255;
+                } else {
+                    if (i == nr_iters - 1)
+                        strength = 0;
+                    else {
+                        strength = *strengthptr;
+                    }
+                    // not so strong edge, only keep it when connected to strong edge.
+                    int strong_lefttop = *(strengths + (y-1) * width + x - 1) > high_treshold;
+                    int strong_top = *(strengths + (y-1) * width + x) > high_treshold;
+                    int strong_righttop = *(strengths + (y-1) * width + x + 1) > high_treshold;
+                    int strong_left = *(strengths + y * width + x - 1) > high_treshold;
+                    int strong_right = *(strengths + y * width + x + 1) > high_treshold;
+                    int strong_leftbottom = *(strengths + (y+1) * width + x - 1) > high_treshold;
+                    int strong_bottom = *(strengths + (y+1) * width + x) > high_treshold;
+                    int strong_rightbottom = *(strengths + (y+1) * width + x + 1) > high_treshold;
+                    switch (*gradptr) {
+                        case 0: {
+                            if (strong_lefttop || strong_left || strong_leftbottom || strong_right ||
+                                strong_rightbottom || strong_righttop) {
+                                strength = 255;
+                            }
+                            break;
+                        }
+                            
+                        case 45: {
+                            if (strong_lefttop || strong_left || strong_top || strong_right ||
+                                strong_rightbottom || strong_bottom) {
+                                strength = 255;
+                            }
+                            break;
+                        }
+                            
+                        case 90: {
+                            if (strong_lefttop || strong_top || strong_righttop || strong_leftbottom ||
+                                strong_bottom || strong_rightbottom ) {
+                                strength = 255;
+                            }
+                            break;
+                        }
+                            
+                        case 135: {
+                            if (strong_leftbottom || strong_left || strong_top || strong_right ||
+                                strong_righttop || strong_bottom) {
+                                strength = 255;
+                            }
+                            break;
+                        }
+                            
+                        default:
+                            break;
+                    }
+                }            
+                *strengthptr = strength;
+                if (strength == 0) {
+                    *outptr++ = 0; *outptr++ = 0; *outptr++ = 0; *outptr = 0;
+                }
+            }
+        }
+    }
+ 
     free(templum);
 }
 void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
@@ -402,12 +504,12 @@ void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
 
     for (int y = 0; y < boxheight; y++) {
 		for (int x = 0; x < boxwidth; x++) {
-            
+
 			curin = inlum + (((y + intop) * inwidth) + (x + inleft));
 			curout = outlum + (((y + outtop) * inwidth) + (x + outleft));
-            
+
             unsigned char lum = *curin;
-            
+
             if (lum >= threshold)
                 *curout = 255;
             else
@@ -430,41 +532,41 @@ void binarization(unsigned char* inlum, unsigned char* outlum,
 
     // calculate tresholds with otsu
     unsigned int threshold = 0;
-    
+
     // http://www.labbookpages.co.uk/software/imgProc/otsuThreshold.html
     // Total number of pixels
     int total = boxwidth * boxheight;
     float sum = 0;
     for (int t=0 ; t<256 ; t++) sum += t * histbuf[t];
-    
+
     float sumB = 0;
     int wB = 0;
     int wF = 0;
-    
+
     float varMax = 0;
 
     for (int t = 0; t < 256; t++) {
         wB += histbuf[t];               // Weight Background
         if (wB == 0) continue;
-        
+
         wF = total - wB;                 // Weight Foreground
         if (wF == 0) break;
-        
+
         sumB += (float) (t * histbuf[t]);
-        
+
         float mB = sumB / wB;            // Mean Background
         float mF = (sum - sumB) / wF;    // Mean Foreground
-        
+
         // Calculate Between Class Variance
         float varBetween = (float)wB * (float)wF * (mB - mF) * (mB - mF);
-        
+
         // Check if new maximum found
         if (varBetween > varMax) {
             varMax = varBetween;
             threshold = t;
         }
     }
-    
+
     binarization_threshold(inlum, outlum, inleft, intop, inwidth, boxwidth, boxheight, outleft, outtop, outwidth, threshold);
 }
 
@@ -518,20 +620,30 @@ typedef struct {
     short int ymax;
 } conn_box_t;
 
-// merge a set of lines in an existing set if connected. Add as new if no connection found.
+/**
+ * merge a set of lines in an existing set if connected. Add as new if no connection found.
+ *
+ * input:
+ *  bounding_boxes:
+ *  newlist:
+ *  max_xdelta:
+ *  max_ydelta:
+ *  merge_lines: if FALSE merge bounding boxes only (pixels don't need to be connected), if TRUE actual lines/pixels
+ *               need to be connected.
+ **/
 void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelta, short int max_ydelta, bool merge_lines)
 {
 	for(NSMutableArray* list in bounding_boxes) {
 		// find component connected with our new component
-        
+
         NSValue* bbval = [list objectAtIndex:0];
         conn_box_t box;
         [bbval getValue:&box];
-        
+
         NSValue* bbnewval = [newlist objectAtIndex:0];
         conn_box_t newbox;
         [bbnewval getValue:&newbox];
-        
+
         // iff bounding boxes overlap, check the individual lines.
         if ((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) ||
             (box.ymax >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
@@ -547,7 +659,7 @@ void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelt
                     box.ymin = std::min(box.ymin, newbox.ymin);
                     box.xmax = std::max(box.xmax, newbox.xmax);
                     box.ymax = std::max(box.ymax, newbox.ymax);
-                    
+
                     NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
                     [list replaceObjectAtIndex:0 withObject:new_bboxval];
 
@@ -559,21 +671,21 @@ void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelt
 
                     return;
                 }
-            
+
                 for(NSValue* crval in list) {
                     if (bbval == crval) // skip first element.
                         continue;
-                    
+
                     conn_line_t comp;
                     [crval getValue:&comp];
-                    
+
                     for(NSValue* newval in newlist) {
                         if (bbnewval == newval) // skip first element
                             continue;
-                        
+
                         conn_line_t newcomp;
                         [newval getValue:&newcomp];
-                        
+
                         // lines connected?
                         if (comp.y >= newcomp.y-max_ydelta && comp.y <= newcomp.y+max_ydelta) {
                             if ((comp.xmin >= newcomp.xmin-max_xdelta && comp.xmin <= newcomp.xmax+max_xdelta) ||
@@ -594,7 +706,7 @@ void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelt
                                 theRange.location = 1;
                                 theRange.length = [newlist count] -1;
                                 [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
-                                
+
                                 return;
                             }
                         }
@@ -616,14 +728,15 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
     NSMutableArray* lines = [[NSMutableArray alloc] init];
 
     // colors should be either 0 (OFF) or 255 (ON). Use <128 or >= 128 as check just to be sure.
-    
+
 	// find horizontal lines of ON pixels
-    for (int y = 6; y < height; y++) {
+    for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width;) {
+            // select a line of connected ON pixels
             for (cur = inptr + y * width + x ; x < width && (*cur++) >= 128 ; x++) {
                 if (!cur_line) {
                     cur_line = (conn_line_t *)malloc(sizeof(conn_line_t));
-                    
+
                     cur_line->y = y;
                     cur_line->xmin = cur_line->xmax = x;
                 } else {
@@ -639,15 +752,15 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
 
                 // store cur_line, merge with previous lines if possible
                 NSMutableArray *newcomp = [[NSMutableArray alloc] init];
-                
+
                 conn_box_t *cur_bbox = (conn_box_t *)malloc(sizeof(conn_box_t));
                 cur_bbox->xmin = cur_line->xmin; cur_bbox->xmax = cur_line->xmax; cur_bbox->ymin = cur_bbox->ymax = cur_line->y;
                 NSValue *cur_bboxval = [[NSValue alloc] initWithBytes:&(*cur_bbox) objCType:@encode(conn_box_t)];
                 [newcomp addObject:cur_bboxval];
-                
+
                 NSValue *cur_lineval = [[NSValue alloc] initWithBytes:&(*cur_line) objCType:@encode(conn_line_t)];
                 [newcomp addObject:cur_lineval];
-                
+
                 merge(lines, newcomp, 1, 1, TRUE);
                 cur_line = 0l;
             } else {
@@ -655,6 +768,8 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
             }
         }
     }
+
+#if 0
 
     int size = [lines count], prev_size = 0;
 
@@ -667,7 +782,7 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
     while (size != prev_size && size != 1)
     {
         prev_size = size;
-        
+
         NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
         for(NSArray* list in lines) {
             NSValue* bbval = [list objectAtIndex:0];
@@ -687,7 +802,7 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
         size = [lines count];
         first_run = false;
     }
-    
+
     // remove bounding boxes that are too small
     NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
     for(NSArray* list in lines) {
@@ -711,18 +826,20 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
     while (size != prev_size && size != 1)
     {
         prev_size = size;
-        
+
         NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
         for(NSArray* list in lines) {
             NSValue* bbval = [list objectAtIndex:0];
             conn_box_t box;
             [bbval getValue:&box];
-            
+
             merge(bounding_boxes, list, 10, 0, FALSE);
         }
         lines = bounding_boxes;
         size = [lines count];
     }
+
+#endif
     
 	return lines;
 }
@@ -734,9 +851,9 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
         NSValue* bbval = [list objectAtIndex:0];
         conn_box_t box;
         [bbval getValue:&box];
-            
+
 		// TODO: cleanup all compranges in the set.
-        
+
 		// draw a blue bounding box
 		for (int x = box.xmin; x < box.xmax; x++) {
 			int xloc = x * bitsPerPixel / 8;
@@ -751,15 +868,15 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
 		}
-        
+
 		for (int y = box.ymin; y < box.ymax; y++) {
 			int yloc = y * width * bitsPerPixel / 8;
-            
+
 			int xloc = box.xmin * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
-            
+
 			xloc = box.xmax * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
@@ -773,22 +890,22 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 void histogram_bounding_boxes(unsigned char *inbuf, NSArray* lines, unsigned int *histogram, int width, int height)
 {
     memset(histogram, 0, 256 * sizeof(unsigned int));
-    
+
     int first = 1;
     for (NSValue* bbval in lines) {
         if (first) {
             first = 0;
             continue;
         }
-        
+
         conn_line_t line;
         [bbval getValue:&line];
 
         // get histogram of this line.
         for (int x = line.xmin; x <= line.xmax; x++) {
             unsigned char *curin = inbuf + line.y * width + x;
-            
-            (*(histogram+(unsigned int)*curin))++;                
+
+            (*(histogram+(unsigned int)*curin))++;
         }
     }
 }
@@ -801,7 +918,7 @@ void binarization_bounding_boxes(unsigned char *inlum, unsigned char *outlum, NS
         NSValue* bbval = [list objectAtIndex:0];
         conn_box_t box;
         [bbval getValue:&box];
-         
+
         binarization(inlum, outlum,
                      box.xmin, box.ymin, width,
                      box.xmax - box.xmin, box.ymax - box.ymin,
@@ -1049,7 +1166,8 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 - (void) awakeFromNib
 {
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
-    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
+    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/el_secreto_de_sus_ojos.JPG";
 //	 NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
@@ -1079,6 +1197,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
@@ -1097,14 +1216,16 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	outputImgBytes = [outImageRep bitmapData];
 
 	rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+//    gaussian_blur(lumin, lumbuf, width, height);
     canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
 //    binarization(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, height); // fixed threshold 240
 //	lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage];
-    
+
     free(lumin);
     free(lum_edge);
+    free(lumbuf);
 }
 
 
@@ -1114,7 +1235,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    
+
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
 									 pixelsWide:[inImageRep pixelsWide]
@@ -1132,11 +1253,11 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 
 /*	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);*/
-    
+
 	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
 	gaussian_blur(lumbuf, lumbuf, width, height);
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-    
+
 	[imageView setImage:outImage];
 }
 
@@ -1148,7 +1269,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    
+
 	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
 									 initWithBitmapDataPlanes:NULL
 									 pixelsWide:[inImageRep pixelsWide]
@@ -1165,20 +1286,22 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	outputImgBytes = [outImageRep bitmapData];
 
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-	
-    // localize text
-    gaussian_blur(lumin, lumbuf, width, height);
-    sobel_edge_detection(lumbuf, lum_edge, width, height);
-    binarization(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, height); // fixed threshold 240
 
+    // localize text
+//    gaussian_blur(lumin, lumbuf, width, height);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    // canny returns only 4 colors + black =-> any color > 0 should be white.
+	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
+
+//    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
-	
-    binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
-    
+
+    binarization_bounding_boxes(lum_edge, lumbuf, bounding_boxes, width, height);
+
     // draw bounding boxes on screen.
-    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel); 
-    
+    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
+
 	[imageView setImage:outImage];
 }
 
@@ -1187,7 +1310,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
-    
+
 	tessocr* ocr = [[tessocr alloc] init];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -1208,23 +1331,23 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-    
+
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-	
+
     // localize text
     gaussian_blur(lumin, lumbuf, width, height);
     sobel_edge_detection(lumbuf, lum_edge, width, height);
     binarization(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, height); // fixed threshold 240
-    
+
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
     binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
-    	
+
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel); 
-    
+    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
+
 	[imageView setImage:outImage];
-    
+
     for(NSArray* list in bounding_boxes) {
         NSValue* bbval = [list objectAtIndex:0];
 		conn_box_t bb;

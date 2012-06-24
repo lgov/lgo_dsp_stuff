@@ -7,10 +7,10 @@
 //
 
 #import <Cocoa/Cocoa.h>
-
+#import "MyNSImageView.h"
 
 @interface dsptestview : NSObject {
-	IBOutlet NSImageView* imageView;
+	IBOutlet MyNSImageView* imageView;
 	IBOutlet NSTextField* lbl;
 	NSImage* image;
 	NSBitmapImageRep* inImageRep;
