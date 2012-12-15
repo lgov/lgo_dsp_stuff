@@ -8,9 +8,10 @@
 
 #import "dsptestview.h"
 #import "tessocr.h"
-#include <Accelerate/Accelerate.h>
-#include "stdlib.h"
+#include <stdlib.h>
 #include <math.h>
+#include <algorithm>
+#include "util.h"
 
 @implementation dsptestview
 
@@ -305,10 +306,11 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
 
     // possible method to choose tresholds:
     // http://www.kerrywong.com/2009/05/07/canny-edge-detection-auto-thresholding/
-    int low_treshold = 80;
+    int low_treshold = 20;
 	int high_treshold = 200;
 
     // step 1: gaussian blur
+//    templum = inlum;
     gaussian_blur(inlum, templum, width, height);
 
     // step 2: sobel horizontal & vertical edge filtering
@@ -418,7 +420,7 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
 
     // step 4: tresholding +
     // step 5: edge tracking by hysteris: following the edge, enhance all edges above the low threshold.
-    int nr_iters = 10;
+    int nr_iters = 1;
     for (int i = 0; i < nr_iters; i++) {
         for (int y = 1; y < height - 1; y++) {
             for (int x = 1; x < width -1; x++) {
@@ -489,7 +491,7 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
             }
         }
     }
- 
+    
     free(templum);
 }
 void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
@@ -719,6 +721,88 @@ void merge(NSMutableArray* bounding_boxes, NSArray* newlist, short int max_xdelt
     [bounding_boxes addObject:newlist];
 }
 
+
+// implemented connected components with the same approach as opengl shaders.
+NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height)
+{
+    unsigned char *cur, *buf;
+    unsigned char* outbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char) * 4);
+
+    
+    // iterate over all pixels, assign join or merge
+    for (int y = 1; y < height; y++) {
+		for (int x = 1; x < width;x++) {
+            cur = inptr + y * width + x;
+            buf = outbuf + y * width + x;
+
+            unsigned char *topLeft = inptr + (y-1) * width + x-1;
+            unsigned char *left = inptr + y * width + x-1;
+            unsigned char *top = inptr + (y-1) * width + x;
+            unsigned char *topRight = inptr + (y-1) * width + x+1;
+            unsigned char *right = inptr + y * width + x+1;
+            
+            int sum = 16.0 * (*topLeft==255?1:0) + 8.0 * (*top==255?1:0) + 4.0 * (*topRight==255?1:0) +
+                       1.0 * (*left==255?1:0)                       + 2.0 * (*right==255?1:0);
+     
+
+            float merge = 1.0 / 5.0; // join up
+            unsigned char connectToX = 0; // X delta to next lookup pixel
+            unsigned char connectToY = 0; // Y delta to next lookup pixel
+            
+            if (sum >= 16.0) { 
+                connectToX = -1;
+                connectToY = -1;
+                
+                if (sum >= 20.0 && sum <= 22.0)
+                    merge = 3.0/5.0;
+            } else if (sum >= 8.0) {
+                connectToX = 0;
+                connectToY = -1;
+
+                if (sum % 2 == 1.0)
+                    merge = 4.0/5.0;
+            } else if (sum >= 3.0) {
+                connectToX = 1;
+                connectToY = 1;
+                
+                if (sum == 5.0)
+                    merge = 5.0/5.0;
+            } else if (sum % 2 == 1.0) {
+                connectToX = -1;
+                connectToY = 0;
+            }
+            
+            float label = 1.0; //mod(connectTo.x, 16.0/256.0) * 16.0/256.0 + mod(connectTo.y, 16.0/256.0);
+            
+            // join the label at connectTo, tell our right/top oriented neighbours they
+            // should take over our label.
+            
+            //  gl_FragColor = vec4(label, connectTo, merge);
+            *buf++ = label * 256;
+            *buf++ = connectToX + 128;
+            *buf++ = connectToY + 128;
+            *buf++ = merge * 256;
+        }
+    }
+    
+    
+    for (int iter = 0;iter < 1; iter++) {
+        for (int y = 1; y < height; y++) {
+            for (int x = 1; x < width;x++) {
+                cur = inptr + y * width + x;
+                buf = outbuf + y * width + x;
+            }
+        }
+    }
+    
+    return NULL;
+}
+
+/** Find connected components in a binary image.
+ *  inptr: one-byte per pixel array
+ *  returns an array of bounding boxes.
+ *
+ **/
 NSArray* connected_binary(unsigned char *inptr, int width, int height)
 {
 	unsigned char* cur;
@@ -769,16 +853,33 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
         }
     }
 
-#if 0
-
+    // combine connected components
     int size = [lines count], prev_size = 0;
-
+    bool first_run = TRUE;
+    while (size != prev_size && size != 1)
+    {
+        prev_size = size;
+        
+        NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
+        for(NSArray* list in lines) {
+            NSValue* bbval = [list objectAtIndex:0];
+            conn_box_t box;
+            [bbval getValue:&box];
+            
+            merge(bounding_boxes, list, 2, 2, TRUE); // skip a few empty pixels, but not more.
+        }
+        lines = bounding_boxes;
+        size = [lines count];
+        first_run = false;
+    }
+    
     // combine small components into characters
     // skip too large components
     // keep merging bounding boxes until minimum number was reached.
+    size = [lines count], prev_size = 0;
     const int maxwidth = width / 4;
     const int maxheight = height / 4;
-    bool first_run = TRUE;
+    first_run = TRUE;
     while (size != prev_size && size != 1)
     {
         prev_size = size;
@@ -802,7 +903,8 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
         size = [lines count];
         first_run = false;
     }
-
+    
+#if 0
     // remove bounding boxes that are too small
     NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
     for(NSArray* list in lines) {
@@ -842,6 +944,18 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
 #endif
     
 	return lines;
+}
+
+void log_bounding_boxes(NSArray* lines)
+{
+    for(NSArray* list in lines) {
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        dsptest_log(LOG_BB, __FILE__, "bounding box: (%d,%d)-(%d,%d)\n",
+                    box.xmin, box.ymin, box.xmax, box.ymax);
+    }
 }
 
 void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
@@ -1167,7 +1281,9 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 {
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
-    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/iphone-prime.png";
+    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/test_small.jpg";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/el_secreto_de_sus_ojos.JPG";
 //	 NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
@@ -1191,7 +1307,22 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	}
 }
 
-- (IBAction)calcEdges:(id)sender
+NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
+{
+	return [[NSBitmapImageRep alloc]
+            initWithBitmapDataPlanes:NULL
+            pixelsWide:[inImageRep pixelsWide]
+            pixelsHigh:[inImageRep pixelsHigh]
+            bitsPerSample:[inImageRep bitsPerSample]
+            samplesPerPixel:[inImageRep samplesPerPixel]
+            hasAlpha:[inImageRep hasAlpha]
+            isPlanar:[inImageRep isPlanar]
+            colorSpaceName:[inImageRep colorSpaceName]
+            bytesPerRow:[inImageRep bytesPerRow]
+            bitsPerPixel:[inImageRep bitsPerPixel]];
+}
+
+- (IBAction)edgeDetection:(id)sender:(id)sender
 {
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
@@ -1200,27 +1331,18 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
-	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
-									 initWithBitmapDataPlanes:NULL
-									 pixelsWide:[inImageRep pixelsWide]
-									 pixelsHigh:[inImageRep pixelsHigh]
-									 bitsPerSample:[inImageRep bitsPerSample]
-									 samplesPerPixel:[inImageRep samplesPerPixel]
-									 hasAlpha:[inImageRep hasAlpha]
-									 isPlanar:[inImageRep isPlanar]
-									 colorSpaceName:[inImageRep colorSpaceName]
-									 bytesPerRow:[inImageRep bytesPerRow]
-									 bitsPerPixel:[inImageRep bitsPerPixel]];
+	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
+    /*** Step 1: Edge detection ***/
 	rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-//    gaussian_blur(lumin, lumbuf, width, height);
     canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
-//    binarization(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, height); // fixed threshold 240
-//	lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
+//    gaussian_blur(lumin, lumbuf, width, height);
+//    sobel_edge_detection(lumbuf, lum_edge, width, height);
 
+    /* Finished */
 	[imageView setImage:outImage];
 
     free(lumin);
@@ -1228,118 +1350,143 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
     free(lumbuf);
 }
 
-
-- (IBAction)prepare:(id)sender
-{
-	int bitsPerPixel  = [inImageRep bitsPerPixel];
-	int width = [inImageRep pixelsWide];
-	int height = [inImageRep pixelsHigh];
-	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-
-	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
-									 initWithBitmapDataPlanes:NULL
-									 pixelsWide:[inImageRep pixelsWide]
-									 pixelsHigh:[inImageRep pixelsHigh]
-									 bitsPerSample:[inImageRep bitsPerSample]
-									 samplesPerPixel:[inImageRep samplesPerPixel]
-									 hasAlpha:[inImageRep hasAlpha]
-									 isPlanar:[inImageRep isPlanar]
-									 colorSpaceName:[inImageRep colorSpaceName]
-									 bytesPerRow:[inImageRep bytesPerRow]
-									 bitsPerPixel:[inImageRep bitsPerPixel]];
-	NSImage* outImage = [[[NSImage alloc] init] autorelease];
-	[outImage addRepresentation:outImageRep];
-	outputImgBytes = [outImageRep bitmapData];
-
-/*	filter_and_convert_to_gray(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-	prepare(lumbuf, lumoutbuf, width, height, bitsPerPixel);*/
-
-	rgb_convert_to_lum(inputImgBytes, lumbuf, width, height, bitsPerPixel);
-	gaussian_blur(lumbuf, lumbuf, width, height);
-    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
-
-	[imageView setImage:outImage];
-}
-
-- (IBAction)calcConnCons:(id)sender
+- (IBAction)connComps:(id)sender
 {
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
-	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
-									 initWithBitmapDataPlanes:NULL
-									 pixelsWide:[inImageRep pixelsWide]
-									 pixelsHigh:[inImageRep pixelsHigh]
-									 bitsPerSample:[inImageRep bitsPerSample]
-									 samplesPerPixel:[inImageRep samplesPerPixel]
-									 hasAlpha:[inImageRep hasAlpha]
-									 isPlanar:[inImageRep isPlanar]
-									 colorSpaceName:[inImageRep colorSpaceName]
-									 bytesPerRow:[inImageRep bytesPerRow]
-									 bitsPerPixel:[inImageRep bitsPerPixel]];
+	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
+    /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-
-    // localize text
-//    gaussian_blur(lumin, lumbuf, width, height);
     canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+
+    /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
-
-//    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
-
-    binarization_bounding_boxes(lum_edge, lumbuf, bounding_boxes, width, height);
+    //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
 
+    /* Finished */
+	[imageView setImage:outImage];
+    free(lumin);
+    free(lum_edge);
+}
+
+- (IBAction)groupBoundingBoxes:(id)sender:(id)sender
+{
+    int bitsPerPixel  = [inImageRep bitsPerPixel];
+	int width = [inImageRep pixelsWide];
+	int height = [inImageRep pixelsHigh];
+    unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
+	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
+	NSImage* outImage = [[[NSImage alloc] init] autorelease];
+	[outImage addRepresentation:outImageRep];
+	outputImgBytes = [outImageRep bitmapData];
+
+    /*** Step 1: Edge detection ***/
+    rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+
+    /*** Step 2: Get small Bounding Boxes ***/
+    // canny returns only 4 colors + black =-> any color > 0 should be white.
+	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
+    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
+    NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
+    //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
+
+    /*** Step 3: Group bounding boxes ***/
+    
+
+    // draw bounding boxes on screen.
+    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
+
+    /* Finished */
+	[imageView setImage:outImage];
+}
+
+- (IBAction)binarization:(id)sender
+{
+    int bitsPerPixel  = [inImageRep bitsPerPixel];
+	int width = [inImageRep pixelsWide];
+	int height = [inImageRep pixelsHigh];
+    unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
+	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
+	NSImage* outImage = [[[NSImage alloc] init] autorelease];
+	[outImage addRepresentation:outImageRep];
+	outputImgBytes = [outImageRep bitmapData];
+
+    /*** Step 1: Edge detection ***/
+    rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+
+    /*** Step 2: Get small Bounding Boxes ***/
+    // canny returns only 4 colors + black =-> any color > 0 should be white.
+	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
+    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
+    NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
+    //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
+
+    /*** Step 3: Group bounding boxes ***/
+
+    /*** Step 4: Binarization of interior of bounding boxes ***/
+    binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
+
+    // draw bounding boxes on screen.
+    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
+
+    /* Finished */
 	[imageView setImage:outImage];
 }
 
 - (IBAction)ocr:(id)sender
 {
-	int bitsPerPixel  = [inImageRep bitsPerPixel];
+	tessocr* ocr = [[tessocr alloc] init];
+    
+    int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
-
-	tessocr* ocr = [[tessocr alloc] init];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
-	NSBitmapImageRep *outImageRep = [[NSBitmapImageRep alloc]
-									  initWithBitmapDataPlanes:NULL
-									  pixelsWide:[inImageRep pixelsWide]
-									  pixelsHigh:[inImageRep pixelsHigh]
-									  bitsPerSample:[inImageRep bitsPerSample]
-									  samplesPerPixel:[inImageRep samplesPerPixel]
-									  hasAlpha:[inImageRep hasAlpha]
-									  isPlanar:[inImageRep isPlanar]
-									  colorSpaceName:[inImageRep colorSpaceName]
-									  bytesPerRow:[inImageRep bytesPerRow]
-									  bitsPerPixel:[inImageRep bitsPerPixel]];
+	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
 	outputImgBytes = [outImageRep bitmapData];
 
-
+    /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
 
-    // localize text
-    gaussian_blur(lumin, lumbuf, width, height);
-    sobel_edge_detection(lumbuf, lum_edge, width, height);
-    binarization(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, height); // fixed threshold 240
-
+    /*** Step 2: Get small Bounding Boxes ***/
+    // canny returns only 4 colors + black =-> any color > 0 should be white.
+	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
+    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
+    //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
+
+    /*** Step 3: Group bounding boxes ***/
+
+    /*** Step 4: Binarization of interior of bounding boxes ***/
     binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
 
     // draw bounding boxes on screen.
@@ -1348,6 +1495,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 
 	[imageView setImage:outImage];
 
+    /*** Step 5: OCR of binarized bounding boxes ***/
     for(NSArray* list in bounding_boxes) {
         NSValue* bbval = [list objectAtIndex:0];
 		conn_box_t bb;
@@ -1362,8 +1510,8 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 					  ];
         // TODO: split on cariage return
         // remove one character phrases
-        if (text && strlen(text)>0)
-            printf("%s\n", text);
+        if (text && strlen(text) > 0)
+            dsptest_log(LOG_OCR, __FILE__, "found line: %s", text);
 	}
 //	NSString *str = [[NSString alloc] initWithUTF8String:text];
 //	[lbl setStringValue:str];

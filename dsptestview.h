@@ -20,9 +20,10 @@
 	unsigned char* outputImg2Bytes;
 }
 
-- (IBAction)calcConnCons:(id)sender;
-- (IBAction)calcEdges:(id)sender;
-- (IBAction)prepare:(id)sender;
+- (IBAction)connComps:(id)sender;
+- (IBAction)edgeDetection:(id)sender;
+- (IBAction)groupBoundingBoxes:(id)sender;
+- (IBAction)binarization:(id)sender;
 - (IBAction)ocr:(id)sender;
 
 @end
