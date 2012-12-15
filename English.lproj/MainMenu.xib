@@ -1393,7 +1393,7 @@
 							<string key="NSFrame">{{1130, 742}, {124, 32}}</string>
 							<reference key="NSSuperview" ref="439893737"/>
 							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView" ref="615905741"/>
+							<reference key="NSNextKeyView" ref="145866517"/>
 							<bool key="NSEnabled">YES</bool>
 							<object class="NSButtonCell" key="NSCell" id="501999525">
 								<int key="NSCellFlags">67239424</int>
@@ -1431,7 +1431,7 @@
 								<int key="NSPeriodicInterval">25</int>
 							</object>
 						</object>
-						<object class="NSButton" id="615905741">
+						<object class="NSButton" id="145866517">
 							<reference key="NSNextResponder" ref="439893737"/>
 							<int key="NSvFlags">265</int>
 							<string key="NSFrame">{{1130, 710}, {127, 32}}</string>
@@ -1439,12 +1439,12 @@
 							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="733290463"/>
 							<bool key="NSEnabled">YES</bool>
-							<object class="NSButtonCell" key="NSCell" id="732986586">
+							<object class="NSButtonCell" key="NSCell" id="973822692">
 								<int key="NSCellFlags">67239424</int>
 								<int key="NSCellFlags2">134217728</int>
 								<string key="NSContents">Connect Comps</string>
 								<reference key="NSSupport" ref="254677914"/>
-								<reference key="NSControlView" ref="615905741"/>
+								<reference key="NSControlView" ref="145866517"/>
 								<int key="NSButtonFlags">-2038284033</int>
 								<int key="NSButtonFlags2">129</int>
 								<string key="NSAlternateContents"/>
@@ -2231,27 +2231,27 @@
 				</object>
 				<object class="IBConnectionRecord">
 					<object class="IBActionConnection" key="connection">
-						<string key="label">connComps:</string>
-						<reference key="source" ref="976324537"/>
-						<reference key="destination" ref="615905741"/>
-					</object>
-					<int key="connectionID">574</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBActionConnection" key="connection">
-						<string key="label">edgeDetection::</string>
-						<reference key="source" ref="976324537"/>
-						<reference key="destination" ref="300478289"/>
-					</object>
-					<int key="connectionID">575</int>
-				</object>
-				<object class="IBConnectionRecord">
-					<object class="IBActionConnection" key="connection">
 						<string key="label">groupBoundingBoxes:</string>
 						<reference key="source" ref="976324537"/>
 						<reference key="destination" ref="733290463"/>
 					</object>
-					<int key="connectionID">576</int>
+					<int key="connectionID">578</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">edgeDetection:</string>
+						<reference key="source" ref="976324537"/>
+						<reference key="destination" ref="300478289"/>
+					</object>
+					<int key="connectionID">581</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">connComps:</string>
+						<reference key="source" ref="976324537"/>
+						<reference key="destination" ref="145866517"/>
+					</object>
+					<int key="connectionID">582</int>
 				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -2816,7 +2816,7 @@
 							<reference ref="733290463"/>
 							<reference ref="497140682"/>
 							<reference ref="928180614"/>
-							<reference ref="615905741"/>
+							<reference ref="145866517"/>
 						</object>
 						<reference key="parent" ref="972006081"/>
 					</object>
@@ -3392,17 +3392,17 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">569</int>
-						<reference key="object" ref="615905741"/>
+						<reference key="object" ref="145866517"/>
 						<object class="NSMutableArray" key="children">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<reference ref="732986586"/>
+							<reference ref="973822692"/>
 						</object>
 						<reference key="parent" ref="439893737"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">570</int>
-						<reference key="object" ref="732986586"/>
-						<reference key="parent" ref="615905741"/>
+						<reference key="object" ref="973822692"/>
+						<reference key="parent" ref="145866517"/>
 					</object>
 				</object>
 			</object>
@@ -3765,7 +3765,7 @@
 				<reference key="dict.values" ref="0"/>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">576</int>
+			<int key="maxID">582</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -3788,15 +3788,11 @@
 							<string>binarization:</string>
 							<string>connComps:</string>
 							<string>edgeDetection:</string>
-							<string>edgeDetection::</string>
 							<string>groupBoundingBoxes:</string>
-							<string>groupBoundingBoxes::</string>
 							<string>ocr:</string>
 						</object>
 						<object class="NSArray" key="dict.values">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<string>id</string>
-							<string>id</string>
 							<string>id</string>
 							<string>id</string>
 							<string>id</string>
@@ -3811,9 +3807,7 @@
 							<string>binarization:</string>
 							<string>connComps:</string>
 							<string>edgeDetection:</string>
-							<string>edgeDetection::</string>
 							<string>groupBoundingBoxes:</string>
-							<string>groupBoundingBoxes::</string>
 							<string>ocr:</string>
 						</object>
 						<object class="NSArray" key="dict.values">
@@ -3831,15 +3825,7 @@
 								<string key="candidateClassName">id</string>
 							</object>
 							<object class="IBActionInfo">
-								<string key="name">edgeDetection::</string>
-								<string key="candidateClassName">id</string>
-							</object>
-							<object class="IBActionInfo">
 								<string key="name">groupBoundingBoxes:</string>
-								<string key="candidateClassName">id</string>
-							</object>
-							<object class="IBActionInfo">
-								<string key="name">groupBoundingBoxes::</string>
 								<string key="candidateClassName">id</string>
 							</object>
 							<object class="IBActionInfo">
