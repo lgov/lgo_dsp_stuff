@@ -14,4 +14,16 @@
 
 void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
 
+void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
+						int width, int height, int bitsPerPixel);
+void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
+						int width, int height, int bitsPerPixel);
+void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
+                                int width, int height, int bitsPerPixel,
+                                int treshold);
+void histogram(unsigned char *inbuf, unsigned int *histogram,
+               int inleft, int intop,
+               int inwidth,
+               int boxwidth, int boxheight);
+
 #endif

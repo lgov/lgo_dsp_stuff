@@ -55,94 +55,6 @@ int SobelVertical[3][3] = {
     { -1, -2, -1 },
 };
 
-void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
-						int width, int height, int bitsPerPixel)
-{
-	int rowPixels = width * bitsPerPixel / 8;
-
-	for (int y = 0; y < height; y++) {
-		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
-
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-
-			unsigned char *curout = outbuf + yloc + xloc;
-
-			*curout++ = *lumptr; // r
-			*curout++ = *lumptr; // g
-			*curout++ = *lumptr++; // b
-			*curout++ = 0;
-		}
-	}
-}
-
-void histogram(unsigned char *inbuf, unsigned int *histogram,
-               int inleft, int intop,
-               int inwidth,
-               int boxwidth, int boxheight)
-{
-    memset(histogram, 0, 256 * sizeof(unsigned int));
-
-	for (int y = 0; y < boxheight; y++) {
-		for (int x = 0; x < boxwidth; x++) {
-			unsigned char *curin = inbuf + (intop + y) * inwidth + (x + inleft);
-
-            (*(histogram+(unsigned int)*curin))++;
-        }
-    }
-}
-
-void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
-						int width, int height, int bitsPerPixel)
-{
-	int rowPixels = width * bitsPerPixel / 8;
-
-	for (int y = 0; y < height; y++) {
-		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
-
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-
-			unsigned char *curin = inbuf + yloc + xloc;
-
-			unsigned char r = *curin++, g = *curin++, b = *curin++;
-			// calculate luminance from rgb
-			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
-
-			*lumptr++ = lum; // r
-		}
-	}
-}
-
-void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
-                                int width, int height, int bitsPerPixel, int treshold)
-{
-	int rowPixels = width * bitsPerPixel / 8;
-    
-	for (int y = 0; y < height; y++) {
-		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
-        
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-            
-			unsigned char *curin = inbuf + yloc + xloc;
-            
-			unsigned char r = *curin++, g = *curin++, b = *curin++;
-            
-			// calculate luminance from rgb
-			float lum = 0.3 * r + 0.59 * g + 0.11 * b;
-            
-            if (lum > treshold)
-                *lumptr++ = 255;
-            else
-                *lumptr++ = 0;
-		}
-	}
-}
-
 // both x and y in bytes.
 // outptr points to x,y point in output buffer.
 void convolution(unsigned char *lumin, int *outptr,
@@ -218,7 +130,6 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 	int* lumptr;
 	int min = 0, max = 0;
 	unsigned char *curout;
-    unsigned int histogram[256];
 
     rgb_convert_to_lum(inbuf, lumin, width, height, bitsPerPixel);
 
@@ -806,12 +717,12 @@ NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height)
 NSArray* connected_binary(unsigned char *inptr, int width, int height)
 {
 	unsigned char* cur;
-	int curcolor;
     conn_line_t *cur_line = 0l;
 
     NSMutableArray* lines = [[NSMutableArray alloc] init];
 
-    // colors should be either 0 (OFF) or 255 (ON). Use <128 or >= 128 as check just to be sure.
+    // colors should be either 0 (OFF) or 255 (ON). Use <128 or >= 128 as check
+    // just to be sure.
 
 	// find horizontal lines of ON pixels
     for (int y = 0; y < height; y++) {
@@ -872,14 +783,20 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
         size = [lines count];
         first_run = false;
     }
-    
+
+    return lines;
+}
+
+NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
+{
     // combine small components into characters
     // skip too large components
     // keep merging bounding boxes until minimum number was reached.
-    size = [lines count], prev_size = 0;
+    int size = [lines count], prev_size = 0;
     const int maxwidth = width / 4;
     const int maxheight = height / 4;
-    first_run = TRUE;
+    bool first_run = TRUE;
+    
     while (size != prev_size && size != 1)
     {
         prev_size = size;
@@ -1128,7 +1045,7 @@ NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int h
 	int minheight=2;
 	int maxwidth = 50;
 	int maxheight = 50;
-	int maxratio = 5;
+//	int maxratio = 5;
 
 	for (int y = 0; y < height; y++) {
 		int yloc = y * width * bitsPerPixel / 8;
@@ -1322,7 +1239,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
             bitsPerPixel:[inImageRep bitsPerPixel]];
 }
 
-- (IBAction)edgeDetection:(id)sender:(id)sender
+- (IBAction)edgeDetection:(id)sender
 {
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
@@ -1383,14 +1300,13 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     free(lum_edge);
 }
 
-- (IBAction)groupBoundingBoxes:(id)sender:(id)sender
+- (IBAction)groupBoundingBoxes:(id)sender
 {
     int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 
 	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
@@ -1404,15 +1320,14 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
-    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-    
+    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
 
     // draw bounding boxes on screen.
-    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
 
     /* Finished */
@@ -1440,14 +1355,15 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
-    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
+    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
     binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
+    //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
 
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
@@ -1485,6 +1401,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
+    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
     binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
