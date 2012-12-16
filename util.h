@@ -22,9 +22,8 @@ typedef struct {
     short int ymax;
 } conn_box_t;
 
-NSArray* group_bounding_boxes(NSArray* lines, int width, int height);
-void log_bounding_boxes(NSArray* lines);
-NSArray* connected_binary(unsigned char *inptr, int width, int height);
-NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height);
+NSArray* group_bounding_boxes(const NSArray* lines, int width, int height);
+void log_bounding_boxes(const NSArray* lines);
+NSArray* connected_binary(const unsigned char *inptr, int width, int height);
 
 #endif

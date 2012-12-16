@@ -10,15 +10,15 @@
 #include "graphics.h"
 // #include "util.h"
 
-int sharpen[3][3]  = { { -1, -1, -1 },
+static const int sharpen[3][3]  = { { -1, -1, -1 },
     { -1,  8, -1 },
     { -1, -1, -1 } };
 
-int smoothen[3][3]  = { { 1, 1, 1 },
+static const int smoothen[3][3]  = { { 1, 1, 1 },
 	{ 1, 1, 1 },
 	{ 1, 1, 1 } };
 
-int LoG[9][9] = {
+static const int LoG[9][9] = {
 	{ 0, 1, 1, 2, 2, 2, 1, 1, 0 },
 	{ 1, 2, 4, 5, 5, 5, 4, 2, 1 },
 	{ 1, 4, 5, 3, 0, 3, 5, 4, 1 },
@@ -29,28 +29,28 @@ int LoG[9][9] = {
 	{ 1, 4, 5, 3, 0, 3, 5, 4, 1 },
 	{ 0, 1, 1, 2, 2, 2, 1, 1, 0 } };
 
-int Gaussian[5][5] = {
+static const int Gaussian[5][5] = {
     { 1, 4, 7, 4, 1 },
     { 4, 16, 26, 16, 4 },
     { 7, 26, 41, 26, 7 },
     { 4, 16, 26, 16, 4 },
     { 1, 4, 7, 4, 1 },
 };
-int GaussianDivider = 273;
+static const int GaussianDivider = 273;
 
-int SobelHorizontal[3][3] = {
+static const int SobelHorizontal[3][3] = {
     { -1, 0, +1 },
     { -2, 0, +2 },
     { -1, 0, +1 },
 };
 
-int SobelVertical[3][3] = {
+static const int SobelVertical[3][3] = {
     { +1, +2, +1 },
     {  0,  0,  0 },
     { -1, -2, -1 },
 };
 
-void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
+void rgb_convert_to_lum(const unsigned char *inbuf, unsigned char *lumbuf,
 						int width, int height, int bitsPerPixel)
 {
 	int rowPixels = width * bitsPerPixel / 8;
@@ -62,7 +62,7 @@ void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
 		for (int x = 0; x < width; x++) {
 			int xloc = x * bitsPerPixel / 8;
 
-			unsigned char *curin = inbuf + yloc + xloc;
+			const unsigned char *curin = inbuf + yloc + xloc;
 
 			unsigned char r = *curin++, g = *curin++, b = *curin++;
 			// calculate luminance from rgb
@@ -73,14 +73,14 @@ void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
 	}
 }
 
-void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
+void lum_convert_to_rgb(const unsigned char *lumbuf, unsigned char *outbuf,
 						int width, int height, int bitsPerPixel)
 {
 	int rowPixels = width * bitsPerPixel / 8;
 
 	for (int y = 0; y < height; y++) {
 		int yloc = y * rowPixels;
-		unsigned char *lumptr = lumbuf + y * width;
+		const unsigned char *lumptr = lumbuf + y * width;
 
 		for (int x = 0; x < width; x++) {
 			int xloc = x * bitsPerPixel / 8;
@@ -95,7 +95,7 @@ void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
 	}
 }
 
-void histogram(unsigned char *inbuf, unsigned int *histogram,
+void histogram(const unsigned char *inbuf, unsigned int *histogram,
                int inleft, int intop,
                int inwidth,
                int boxwidth, int boxheight)
@@ -104,14 +104,14 @@ void histogram(unsigned char *inbuf, unsigned int *histogram,
 
 	for (int y = 0; y < boxheight; y++) {
 		for (int x = 0; x < boxwidth; x++) {
-			unsigned char *curin = inbuf + (intop + y) * inwidth + (x + inleft);
+			const unsigned char *curin = inbuf + (intop + y) * inwidth + (x + inleft);
 
             (*(histogram+(unsigned int)*curin))++;
         }
     }
 }
 
-void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
+void rgb_convert_to_bw_treshold(const unsigned char *inbuf, unsigned char *lumbuf,
                                 int width, int height, int bitsPerPixel,
                                 int treshold)
 {
@@ -124,7 +124,7 @@ void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
 		for (int x = 0; x < width; x++) {
 			int xloc = x * bitsPerPixel / 8;
 
-			unsigned char *curin = inbuf + yloc + xloc;
+			const unsigned char *curin = inbuf + yloc + xloc;
 
 			unsigned char r = *curin++, g = *curin++, b = *curin++;
 
@@ -141,7 +141,7 @@ void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
 
 // both x and y in bytes.
 // outptr points to x,y point in output buffer.
-void convolution(unsigned char *lumin, int *outptr,
+void convolution(const unsigned char *lumin, int *outptr,
                  int x, int y,
                  int width, int height,
                  int *matrix, int matrixSize,
@@ -149,7 +149,7 @@ void convolution(unsigned char *lumin, int *outptr,
                  int *min, int *max)
 {
 	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
-	unsigned char *incur;
+	const unsigned char *incur;
     int lum = 0;
 
 	// calculate convolution of one pixel!
@@ -176,14 +176,14 @@ void convolution(unsigned char *lumin, int *outptr,
 	*outptr = lum;
 }
 
-void convolution_in_range(unsigned char *lumin, unsigned char *lumout,
+void convolution_in_range(const unsigned char *lumin, unsigned char *lumout,
                           int x, int y,
                           int width, int height,
                           int *matrix, int matrixSize,
                           int matrix_divider)
 {
 	int offset = matrixSize / 2;  // should be 1 for a matrix of size 3.
-	unsigned char *incur;
+	const unsigned char *incur;
     int lum = 0;
 
 	// calculate convolution of one pixel!
@@ -244,7 +244,7 @@ void filter_and_convert_to_gray(unsigned char *inbuf, unsigned char *outbuf,
 	}
 }
 
-void gaussian_blur(unsigned char *inlum, unsigned char *outlum,
+void gaussian_blur(const unsigned char *inlum, unsigned char *outlum,
                    int width, int height)
 {
     unsigned char *lumptr;
@@ -261,7 +261,7 @@ void gaussian_blur(unsigned char *inlum, unsigned char *outlum,
 
 #define PI 3.14159265
 
-void sobel_edge_detection(unsigned char *inlum, unsigned char *outlum,
+void sobel_edge_detection(const unsigned char *inlum, unsigned char *outlum,
                           int width, int height)
 {
     int lumx, lumy, lumsum;
@@ -292,7 +292,7 @@ void sobel_edge_detection(unsigned char *inlum, unsigned char *outlum,
 }
 
 // http://dasl.mem.drexel.edu/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html
-void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
+void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
                           int width, int height, int bitsperpixel)
 {
     unsigned char* templum = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -490,7 +490,7 @@ void canny_edge_detection(unsigned char *inlum, unsigned char *outbuf,
     free(templum);
 }
 
-void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
+void binarization_threshold(const unsigned char* inlum, unsigned char* outlum,
                             int inleft, int intop,
                             int inwidth,
                             int boxwidth, int boxheight,
@@ -498,7 +498,8 @@ void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
                             int outwidth,
                             int threshold)
 {
-    unsigned char *curin, *curout;
+    const unsigned char *curin;
+    unsigned char *curout;
 
     for (int y = 0; y < boxheight; y++) {
 		for (int x = 0; x < boxwidth; x++) {
@@ -516,7 +517,7 @@ void binarization_threshold(unsigned char* inlum, unsigned char* outlum,
 	}
 }
 
-void binarization(unsigned char* inlum, unsigned char* outlum,
+void binarization(const unsigned char* inlum, unsigned char* outlum,
                   int inleft, int intop,
                   int inwidth,
                   int boxwidth, int boxheight,
@@ -573,10 +574,11 @@ void binarization(unsigned char* inlum, unsigned char* outlum,
 #define SHADES 32
 
 // ensure that pixels of similar color will have the exact same color.
-void prepare(unsigned char *inlum, unsigned char *outlum, int width, int height, int bitsPerPixel)
+void prepare(const unsigned char *inlum, unsigned char *outlum,
+             int width, int height, int bitsPerPixel)
 {
 	unsigned char lum, prevlum;
-	unsigned char* cur;
+	const unsigned char* cur;
 	int newlum = 255;
 
 	for (int y = 0; y < height; y++) {

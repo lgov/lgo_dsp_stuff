@@ -31,242 +31,6 @@ void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...)
 
 typedef struct {
 	short int xmin;
-	short int ymin;
-	short int xmax;
-	short int ymax;
-	int index;
-} comp_range_t;
-
-NSArray* connected(unsigned char *inptr, unsigned char *outptr, int width, int height, int bitsPerPixel)
-{
-	int r,g,b;
-	unsigned char* cur;
-	int prevcolor, curcolor;
-	int newcolor = 0x080808;
-	int prevx, prevy;
-	int* comps = (int*)malloc(width * height * sizeof(int));
-
-	comp_range_t* compsranges = (comp_range_t*)malloc(width * height *
-                                                      sizeof(comp_range_t));
-
-	int currentcomp=0;
-	int maxcomp = 0;
-
-	*comps = 0;
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			cur = inptr + y * width + x;
-			curcolor = *cur++;
-
-			// check if this pixel has the same color as all 4 previous
-			// connecting pixels.
-			int firstline = (y == 0 ? 3 : 0); // don't check prev. line pixels
-            // if we're processing the first line.
-			int firstcol = (x == 0 ? 2 : 4); // don't check prev. col pixels on
-            // first column.
-			int found = FALSE;
-			for (int i = firstline ; i < firstcol; i++) {
-				switch(i) {
-				    case 0: // y-1, x
-						prevy = y - 1; prevx = x;
-						break;
-				    case 1: // y-1, x + 1
-						prevy = y - 1; prevx = x + 1;
-						break;
-				    case 2: // y-1, x-1
-						prevy = y - 1; prevx = x - 1;
-						break;
-				    case 3: // y, x - 1
-						prevy = y; prevx = x - 1;
-						break;
-				}
-
-				cur = inptr + prevy * width + prevx;
-				prevcolor = *cur++;
-				if (abs(curcolor - prevcolor) < 10) {
-					currentcomp = *(comps+prevy*width+prevx);
-					found = TRUE;
-					break;
-				}
-			}
-			if (!found) {
-				currentcomp = maxcomp++;
-			}
-
-			// use x + 1 and y + 1 to use 0 as uninitialized.
-			// doesn't matter for calculating width/height.
-			if (compsranges[currentcomp].xmin == 0 ||
-				x + 1 < compsranges[currentcomp].xmin)
-				compsranges[currentcomp].xmin = x + 1;
-			if (compsranges[currentcomp].xmax == 0 ||
-				x + 1 > compsranges[currentcomp].xmax)
-				compsranges[currentcomp].xmax = x + 1;
-			if (compsranges[currentcomp].ymin == 0 ||
-				y + 1 < compsranges[currentcomp].ymin)
-				compsranges[currentcomp].ymin = y + 1;
-			if (compsranges[currentcomp].ymax == 0 ||
-				y + 1 > compsranges[currentcomp].ymax)
-				compsranges[currentcomp].ymax = y + 1;
-			compsranges[currentcomp].index = -1;
-
-            *(comps+y*width+x) = currentcomp;
-		}
-	}
-
-	int minwidth=2;
-	int minheight=2;
-	int maxwidth = 50;
-	int maxheight = 50;
-    //	int maxratio = 5;
-
-	for (int y = 0; y < height; y++) {
-		int yloc = y * width * bitsPerPixel / 8;
-
-		for (int x = 0; x < width; x++) {
-			int xloc = x * bitsPerPixel / 8;
-
-			int comp = *(comps+y*width+x);
-
-			newcolor = comp;
-			// only keep those components that match certain shape requirements.
-			if (compsranges[comp].xmax - compsranges[comp].xmin > maxwidth)
-				newcolor = 0x000000;
-			if (compsranges[comp].ymax - compsranges[comp].ymin > maxheight)
-				newcolor = 0x000000;
-			if ((compsranges[comp].xmax - compsranges[comp].xmin < minwidth) &&
-				(compsranges[comp].ymax - compsranges[comp].ymin < minheight))
-				newcolor = 0x000000;
-			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
-				newcolor = 0x000000;
-			if (compsranges[comp].ymax - compsranges[comp].ymin < minheight)
-				newcolor = 0x000000;
-
-#if 0
-			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
-				newcolor = 0x000000;
-			if (compsranges[comp].ymax - compsranges[comp].ymin < minheight)
-				newcolor = 0x000000;
-			if ((compsranges[comp].ymax - compsranges[comp].ymin) >
-				(compsranges[comp].xmax - compsranges[comp].xmin) * maxratio)
-				newcolor = 0x000000;
-			if ((compsranges[comp].xmax - compsranges[comp].xmin) >
-				(compsranges[comp].ymax - compsranges[comp].ymin) * maxratio)
-				newcolor = 0x000000;
-#endif
-			r = newcolor & 0xff;
-			g = 0x00; //(newcolor >> 8) & 0xff;
-			b = 0x00; // (newcolor >> 16) & 0xff;
-
-			*(outptr + xloc + yloc) = r;
-			*(outptr + xloc + yloc + 1) = g;
-			*(outptr + xloc + yloc + 2) = b;
-		}
-	}
-
-	int maxdelta = 20;
-
-	NSMutableArray* lines = [[NSMutableArray alloc] init];
-
-	// create connected sets along the horizontal axis.
-	for (int y = 0; y < height; y+=3) {
-		int prevcomp = -1;
-		for (int x = 0; x < width; x+=3) {
-			int comp = *(comps+y*width+x);
-
-			if (comp == prevcomp)
-				continue;
-			// only keep those components that match certain shape requirements.
-			if (compsranges[comp].xmax - compsranges[comp].xmin > maxwidth)
-				continue;
-			if (compsranges[comp].ymax - compsranges[comp].ymin > maxheight)
-				continue;
-			if ((compsranges[comp].xmax - compsranges[comp].xmin < minwidth) &&
-				(compsranges[comp].ymax - compsranges[comp].ymin < minheight))
-				continue;
-			if (compsranges[comp].xmax - compsranges[comp].xmin < minwidth)
-				continue;
-			if (compsranges[comp].ymax - compsranges[comp].ymin < minheight)
-				continue;
-
-			if (prevcomp != -1 && compsranges[comp].xmin - compsranges[prevcomp].xmax < maxdelta) {
-				// add to same set.
-				int index = compsranges[prevcomp].index;
-				compsranges[comp].index = index;
-				NSMutableSet *line = [lines objectAtIndex:index];
-				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range_t)];
-				[line addObject:crval];
-			} else {
-				// add to new set.
-				NSMutableSet *newline = [[NSMutableSet alloc] init];
-				compsranges[comp].index = [lines count]; // current index = (current array size++) - 1
-				NSValue *crval = [NSValue value:&compsranges[comp] withObjCType:@encode(comp_range_t)];
-				[newline addObject:crval];
-				[lines addObject:newline];
-			}
-			prevcomp = comp;
-		}
-	}
-
-	NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
-	for(NSMutableSet* set in lines) {
-		// calculate bounding box for each set
-		int bbxmin=width, bbxmax=0, bbymin=height, bbymax=0;
-		for(NSValue* crval in set) {
-			comp_range_t comp;
-			[crval getValue:&comp];
-			if (comp.xmin < bbxmin) bbxmin = comp.xmin - 1;
-			if (comp.ymin < bbymin) bbymin = comp.ymin - 1;
-			if (comp.xmax > bbxmax) bbxmax = comp.xmax - 1;
-			if (comp.ymax > bbymax) bbymax = comp.ymax - 1;
-		}
-
-		if ((bbxmax - bbxmin < 10) &&
-			(bbymax - bbymin < 10))
-			continue;
-
-		// store bounding box
-		conn_box_t* bb = (conn_box_t *)malloc(sizeof(conn_box_t));
-		bb->xmin = bbxmin; bb->xmax = bbxmax; bb->ymin = bbymin; bb->ymax = bbymax;
-		NSValue *crval = [NSValue value:bb withObjCType:@encode(conn_box_t)];
-		[bounding_boxes addObject:crval];
-
-		// TODO: cleanup all compranges in the set.
-
-		// draw a blue bounding box
-		for (int x = bbxmin; x < bbxmax; x++) {
-			int xloc = x * bitsPerPixel / 8;
-			// top
-			int yloc = bbymin * width * bitsPerPixel / 8;
-			*(outptr + xloc + yloc) = 0;
-			*(outptr + xloc + yloc + 1) = 0;
-			*(outptr + xloc + yloc + 2) = 255;
-			// bottom
-			yloc = bbymax * width * bitsPerPixel / 8;
-			*(outptr + xloc + yloc) = 0;
-			*(outptr + xloc + yloc + 1) = 0;
-			*(outptr + xloc + yloc + 2) = 255;
-		}
-
-		for (int y = bbymin; y < bbymax; y++) {
-			int yloc = y * width * bitsPerPixel / 8;
-
-			int xloc = bbxmin * bitsPerPixel / 8;
-			*(outptr + xloc + yloc) = 0;
-			*(outptr + xloc + yloc + 1) = 0;
-			*(outptr + xloc + yloc + 2) = 255;
-            
-			xloc = bbxmax * bitsPerPixel / 8;
-			*(outptr + xloc + yloc) = 0;
-			*(outptr + xloc + yloc + 1) = 0;
-			*(outptr + xloc + yloc + 2) = 255;
-		}
-	}
-
-	return bounding_boxes;
-}
-
-typedef struct {
-	short int xmin;
 	short int xmax;
 	short int y;
 } conn_line_t;
@@ -373,7 +137,7 @@ merge(NSMutableArray* bounding_boxes, NSArray* newlist,
     [bounding_boxes addObject:newlist];
 }
 
-NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
+NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
 {
     // combine small components into characters
     // skip too large components
@@ -382,6 +146,7 @@ NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
     const int maxwidth = (width * 3) / 4;
     const int maxheight = (height * 3) / 4;
     bool first_run = TRUE;
+    NSArray* result;
 
     while (size != prev_size && size != 1)
     {
@@ -404,14 +169,14 @@ NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
                 }
             merge(bounding_boxes, list, 10, 5, FALSE);
         }
-        lines = bounding_boxes;
+        result = bounding_boxes;
         size = [lines count];
         first_run = false;
     }
 
     // remove bounding boxes that are too small
     NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
-    for(NSArray* list in lines) {
+    for(NSArray* list in result) {
         NSValue* bbval = [list objectAtIndex:0];
         conn_box_t box;
         [bbval getValue:&box];
@@ -428,7 +193,7 @@ NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
         }
         [bounding_boxes addObject:list];
     }
-    lines = bounding_boxes;
+    result = bounding_boxes;
 
 #if 0
     // combine words into phrases
@@ -452,83 +217,7 @@ NSArray* group_bounding_boxes(NSArray* lines, int width, int height)
     
 #endif
     
-	return lines;
-}
-
-// implemented connected components with the same approach as opengl shaders.
-NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height)
-{
-    unsigned char *cur, *buf;
-    unsigned char* outbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char) * 4);
-
-
-    // iterate over all pixels, assign join or merge
-    for (int y = 1; y < height; y++) {
-		for (int x = 1; x < width;x++) {
-            cur = inptr + y * width + x;
-            buf = outbuf + y * width + x;
-
-            unsigned char *topLeft = inptr + (y-1) * width + x-1;
-            unsigned char *left = inptr + y * width + x-1;
-            unsigned char *top = inptr + (y-1) * width + x;
-            unsigned char *topRight = inptr + (y-1) * width + x+1;
-            unsigned char *right = inptr + y * width + x+1;
-
-            int sum = 16.0 * (*topLeft==255?1:0) + 8.0 * (*top==255?1:0) + 4.0 * (*topRight==255?1:0) +
-            1.0 * (*left==255?1:0)                       + 2.0 * (*right==255?1:0);
-
-
-            float merge = 1.0 / 5.0; // join up
-            unsigned char connectToX = 0; // X delta to next lookup pixel
-            unsigned char connectToY = 0; // Y delta to next lookup pixel
-
-            if (sum >= 16.0) {
-                connectToX = -1;
-                connectToY = -1;
-
-                if (sum >= 20.0 && sum <= 22.0)
-                    merge = 3.0/5.0;
-            } else if (sum >= 8.0) {
-                connectToX = 0;
-                connectToY = -1;
-
-                if (sum % 2 == 1.0)
-                    merge = 4.0/5.0;
-            } else if (sum >= 3.0) {
-                connectToX = 1;
-                connectToY = 1;
-
-                if (sum == 5.0)
-                    merge = 5.0/5.0;
-            } else if (sum % 2 == 1.0) {
-                connectToX = -1;
-                connectToY = 0;
-            }
-
-            float label = 1.0; //mod(connectTo.x, 16.0/256.0) * 16.0/256.0 + mod(connectTo.y, 16.0/256.0);
-
-            // join the label at connectTo, tell our right/top oriented neighbours they
-            // should take over our label.
-
-            //  gl_FragColor = vec4(label, connectTo, merge);
-            *buf++ = label * 256;
-            *buf++ = connectToX + 128;
-            *buf++ = connectToY + 128;
-            *buf++ = merge * 256;
-        }
-    }
-
-
-    for (int iter = 0;iter < 1; iter++) {
-        for (int y = 1; y < height; y++) {
-            for (int x = 1; x < width;x++) {
-                cur = inptr + y * width + x;
-                buf = outbuf + y * width + x;
-            }
-        }
-    }
-
-    return NULL;
+	return result;
 }
 
 /** Find connected components in a binary image.
@@ -536,9 +225,9 @@ NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height)
  *  returns an array of bounding boxes.
  *
  **/
-NSArray* connected_binary(unsigned char *inptr, int width, int height)
+NSArray* connected_binary(const unsigned char *inptr, int width, int height)
 {
-	unsigned char* cur;
+	const unsigned char* cur;
     conn_line_t *cur_line = 0l;
 
     NSMutableArray* lines = [[NSMutableArray alloc] init];
@@ -611,7 +300,9 @@ NSArray* connected_binary(unsigned char *inptr, int width, int height)
 
 #if 0
 // histogram on the borders of characters doesn't work well, as these borders have aliassing and shadows => no single color.
-void histogram_bounding_boxes(unsigned char *inbuf, NSArray* lines, unsigned int *histogram, int width, int height)
+void
+histogram_bounding_boxes(const unsigned char *inbuf, NSArray* lines,
+                         unsigned int *histogram, int width, int height)
 {
     memset(histogram, 0, 256 * sizeof(unsigned int));
 
@@ -627,7 +318,7 @@ void histogram_bounding_boxes(unsigned char *inbuf, NSArray* lines, unsigned int
 
         // get histogram of this line.
         for (int x = line.xmin; x <= line.xmax; x++) {
-            unsigned char *curin = inbuf + line.y * width + x;
+            const unsigned char *curin = inbuf + line.y * width + x;
 
             (*(histogram+(unsigned int)*curin))++;
         }
@@ -635,7 +326,7 @@ void histogram_bounding_boxes(unsigned char *inbuf, NSArray* lines, unsigned int
 }
 #endif
 
-void log_bounding_boxes(NSArray* lines)
+void log_bounding_boxes(const NSArray* lines)
 {
     for(NSArray* list in lines) {
         NSValue* bbval = [list objectAtIndex:0];
