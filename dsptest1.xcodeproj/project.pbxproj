@@ -14,6 +14,7 @@
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F39B2748167BCADC0085D61A /* util.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2747167BCADC0085D61A /* util.mm */; };
+		F39B2756167E53A70085D61A /* graphics.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2755167E53A70085D61A /* graphics.mm */; };
 		F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */ = {isa = PBXBuildFile; fileRef = F3DCACAD1568106F00134670 /* MyNSImageView.m */; };
 		F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3E7425A16793B7000EED3B1 /* Accelerate.framework */; };
 		F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3FE478C153956CF00CA9DDF /* tessocr.mm */; };
@@ -38,6 +39,8 @@
 		F32C1ED614E30B1600C594FB /* dsptestview.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = dsptestview.mm; sourceTree = "<group>"; };
 		F39B2747167BCADC0085D61A /* util.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = util.mm; sourceTree = "<group>"; };
 		F39B2749167BCAE70085D61A /* util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
+		F39B2754167E537C0085D61A /* graphics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
+		F39B2755167E53A70085D61A /* graphics.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = graphics.mm; sourceTree = "<group>"; };
 		F3DCACAC1568106F00134670 /* MyNSImageView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyNSImageView.h; sourceTree = "<group>"; };
 		F3DCACAD1568106F00134670 /* MyNSImageView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyNSImageView.m; sourceTree = "<group>"; };
 		F3E7425A16793B7000EED3B1 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = ../../../../System/Library/Frameworks/Accelerate.framework; sourceTree = "<group>"; };
@@ -101,6 +104,8 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F39B2755167E53A70085D61A /* graphics.mm */,
+				F39B2754167E537C0085D61A /* graphics.h */,
 				F39B2749167BCAE70085D61A /* util.h */,
 				F39B2747167BCADC0085D61A /* util.mm */,
 				F3E7425A16793B7000EED3B1 /* Accelerate.framework */,
@@ -216,6 +221,7 @@
 				F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */,
 				F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */,
 				F39B2748167BCADC0085D61A /* util.mm in Sources */,
+				F39B2756167E53A70085D61A /* graphics.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
