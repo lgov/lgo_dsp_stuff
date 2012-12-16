@@ -25,5 +25,6 @@ typedef struct {
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height);
 void log_bounding_boxes(const NSArray* lines);
 NSArray* connected_binary(const unsigned char *inptr, int width, int height);
+char* filter_ocr_string(const char *txt);
 
 #endif

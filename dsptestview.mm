@@ -287,7 +287,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-//    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
+    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
     binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
@@ -303,7 +303,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
         NSValue* bbval = [list objectAtIndex:0];
 		conn_box_t bb;
 		[bbval getValue:&bb];
-		char* text = [ocr run_tesseract:lumbuf
+		const char* ocr_text =
+                    [ocr run_tesseract:lumbuf
 						bytes_per_pixel:1
 						 bytes_per_line:width
 								   left:bb.xmin
@@ -311,10 +312,9 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 								  width:bb.xmax - bb.xmin
 								 height:bb.ymax - bb.ymin
 					  ];
-        // TODO: split on cariage return
-        // remove one character phrases
-        if (text && strlen(text) > 0)
-            dsptest_log(LOG_OCR, __FILE__, "found line: %s", text);
+        char* text = filter_ocr_string(ocr_text);
+        if (text)
+            dsptest_log(LOG_OCR, __FILE__, "found line: %s\n", text);
 	}
 //	NSString *str = [[NSString alloc] initWithUTF8String:text];
 //	[lbl setStringValue:str];

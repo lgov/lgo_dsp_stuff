@@ -137,23 +137,103 @@ merge(NSMutableArray* bounding_boxes, NSArray* newlist,
     [bounding_boxes addObject:newlist];
 }
 
+/**
+ * remove_overlapping searches the list of bounding boxes for those that seem
+ * to group other smaller components. This often happens when text has a 
+ * rectangular background. We want to remove the component matching the
+ * background.
+ **/
+static NSArray*
+remove_overlapping(const NSArray* comps, int width, int height)
+{
+    /* If box is smaller than this with or height, it's probably not a
+       grouping component. */
+    const int minwidth = 10;
+    const int minheight = 10;
+    const int maxChildComps = 4;
+
+    NSMutableArray* result = [[NSMutableArray alloc] init];
+
+    for(int i = 0; i < [comps count]; i++)
+    {
+        NSArray* list = [comps objectAtIndex:i];
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        if ((box.xmax - box.xmin > minwidth) &&
+            (box.ymax - box.ymin > minheight))
+        {
+            int childComps = 0;
+
+            for(int j = 0; j < [comps count]; j++)
+            {
+                NSArray* list2 = [comps objectAtIndex:j];
+                NSValue* bbval2 = [list2 objectAtIndex:0];
+                conn_box_t box2;
+                [bbval2 getValue:&box2];
+
+                if (bbval == bbval2)
+                    continue;
+
+                /* Don't count very small boxes */
+                if ((box2.xmax - box2.xmin < 5) ||
+                    (box2.ymax - box2.ymin < 5))
+                    continue;
+
+                if (box.xmin <= box2.xmin &&
+                    box.ymin <= box2.ymin &&
+                    box.xmax >= box2.xmax &&
+                    box.ymax >= box2.ymax)
+                {
+                    childComps++;
+                }
+            }
+
+            if (childComps > maxChildComps)
+            {
+                dsptest_log(LOG_BB, __FILE__,
+                            " remove bounding box with %d children: "\
+                            "(%d,%d)-(%d,%d)\n",
+                            childComps, box.xmin, box.ymin, box.xmax, box.ymax);
+                continue;
+            }
+        }
+        [result addObject:list];
+    }
+
+    
+
+    return result;
+}
+
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
 {
-    // combine small components into characters
-    // skip too large components
-    // keep merging bounding boxes until minimum number was reached.
-    int size = [lines count], prev_size = 0;
+    int size, prev_size = 0;
+    bool first_run = true;
+
+    NSArray* result = remove_overlapping(lines, width, height);
+    size = [result count];
+
+#if 0
+    /* Cleanup and merging parameters */
     const int maxwidth = (width * 3) / 4;
     const int maxheight = (height * 3) / 4;
-    bool first_run = TRUE;
-    NSArray* result;
+    const int maxXdelta = 10;
+    const int maxYdelta = 2;
 
+    // combine small components into characters
+    // skip too large components
+    // keep merging bounding boxes until the minimum is reached.
+    
+    /* Merge components in larger groups, preferably along the horizontal
+       axis. */
     while (size != prev_size && size != 1)
     {
         prev_size = size;
 
         NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
-        for(NSArray* list in lines) {
+        for(NSArray* list in result) {
             NSValue* bbval = [list objectAtIndex:0];
             conn_box_t box;
             [bbval getValue:&box];
@@ -167,14 +247,16 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
                                 box.xmin, box.ymin, box.xmax, box.ymax);
                     continue;
                 }
-            merge(bounding_boxes, list, 10, 5, FALSE);
+            merge(bounding_boxes, list, maxXdelta, maxYdelta, false);
         }
         result = bounding_boxes;
         size = [lines count];
         first_run = false;
     }
 
-    // remove bounding boxes that are too small
+
+    /* Cleanup the almost final group of connected components:
+       - remove bounding boxes that are too small */
     NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
     for(NSArray* list in result) {
         NSValue* bbval = [list objectAtIndex:0];
@@ -195,7 +277,7 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
     }
     result = bounding_boxes;
 
-#if 0
+// #if 0
     // combine words into phrases
     // keep merging bounding boxes until minimum number was reached.
     size = [lines count], prev_size = 0;
@@ -336,4 +418,49 @@ void log_bounding_boxes(const NSArray* lines)
         dsptest_log(LOG_BB, __FILE__, "bounding box: (%d,%d)-(%d,%d)\n",
                     box.xmin, box.ymin, box.xmax, box.ymax);
     }
+}
+
+/**
+ * Takes a line of text, received from the ocr engine, and cleans up.
+ * returns 0l for unwanted lines.
+ */
+char* filter_ocr_string(const char *txt)
+{
+    char *result, *outp;
+    const char *p;
+    int alphabetic_chars = 0;
+
+    /* String is NULL */
+    if (!txt)
+        return 0l;
+
+    /* String too long */
+    int len = strlen(txt);
+    if (len > 1024)
+        return 0l;
+    result = (char*)malloc(len);
+
+    p = txt; outp = result;
+
+    /* Tesseract has the habbit of adding crlf add the end of the line.
+       remove it. */
+    for (const char *p = txt; *p;)
+    {
+        if (*p == '\n' || *p == '\r')
+        {
+            *outp = 0;
+            break;
+        }
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z'))
+            alphabetic_chars++;
+
+        *outp++ = *p++;
+    }
+    *outp = 0;
+
+    /* Should have at least one alphabetic character */
+    if (alphabetic_chars == 0)
+        return 0l;
+
+    return result;
 }
