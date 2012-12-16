@@ -14,16 +14,17 @@
 
 void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
 
-void lum_convert_to_rgb(unsigned char *lumbuf, unsigned char *outbuf,
-						int width, int height, int bitsPerPixel);
-void rgb_convert_to_lum(unsigned char *inbuf, unsigned char *lumbuf,
-						int width, int height, int bitsPerPixel);
-void rgb_convert_to_bw_treshold(unsigned char *inbuf, unsigned char *lumbuf,
-                                int width, int height, int bitsPerPixel,
-                                int treshold);
-void histogram(unsigned char *inbuf, unsigned int *histogram,
-               int inleft, int intop,
-               int inwidth,
-               int boxwidth, int boxheight);
+/* Connected components and bounding boxes */
+typedef struct {
+	short int xmin;
+	short int xmax;
+	short int ymin;
+    short int ymax;
+} conn_box_t;
+
+NSArray* group_bounding_boxes(NSArray* lines, int width, int height);
+void log_bounding_boxes(NSArray* lines);
+NSArray* connected_binary(unsigned char *inptr, int width, int height);
+NSArray* connected_div_and_conq(unsigned char *inptr, int width, int height);
 
 #endif
