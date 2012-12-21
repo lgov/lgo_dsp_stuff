@@ -15,7 +15,6 @@
 		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F39B2748167BCADC0085D61A /* util.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2747167BCADC0085D61A /* util.mm */; };
 		F39B2756167E53A70085D61A /* graphics.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2755167E53A70085D61A /* graphics.mm */; };
-		F39B275E1683BD280085D61A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B275D1683BD280085D61A /* SenTestingKit.framework */; };
 		F39B27661683BE120085D61A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B27651683BE120085D61A /* SenTestingKit.framework */; };
 		F39B27681683BE120085D61A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B27671683BE120085D61A /* Cocoa.framework */; };
 		F39B276E1683BE120085D61A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = F39B276C1683BE120085D61A /* InfoPlist.strings */; };
@@ -69,7 +68,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F39B275E1683BD280085D61A /* SenTestingKit.framework in Frameworks */,
 				F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */,
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
 				F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */,
