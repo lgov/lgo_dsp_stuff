@@ -24,9 +24,8 @@
     [super tearDown];
 }
 
-- (void)testExample
-{
-    STFail(@"Unit tests are not implemented yet in OcrTest");
+- (void) testAppDelegate {
+    STAssertTrue(1 == 1, @"1 == 1!");
 }
 
 @end

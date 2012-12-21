@@ -15,6 +15,11 @@
 		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F39B2748167BCADC0085D61A /* util.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2747167BCADC0085D61A /* util.mm */; };
 		F39B2756167E53A70085D61A /* graphics.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2755167E53A70085D61A /* graphics.mm */; };
+		F39B275E1683BD280085D61A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B275D1683BD280085D61A /* SenTestingKit.framework */; };
+		F39B27661683BE120085D61A /* SenTestingKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B27651683BE120085D61A /* SenTestingKit.framework */; };
+		F39B27681683BE120085D61A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B27671683BE120085D61A /* Cocoa.framework */; };
+		F39B276E1683BE120085D61A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = F39B276C1683BE120085D61A /* InfoPlist.strings */; };
+		F39B27711683BE120085D61A /* OcrTest.m in Sources */ = {isa = PBXBuildFile; fileRef = F39B27701683BE120085D61A /* OcrTest.m */; };
 		F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */ = {isa = PBXBuildFile; fileRef = F3DCACAD1568106F00134670 /* MyNSImageView.m */; };
 		F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3E7425A16793B7000EED3B1 /* Accelerate.framework */; };
 		F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3FE478C153956CF00CA9DDF /* tessocr.mm */; };
@@ -41,6 +46,15 @@
 		F39B2749167BCAE70085D61A /* util.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = util.h; sourceTree = "<group>"; };
 		F39B2754167E537C0085D61A /* graphics.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = graphics.h; sourceTree = "<group>"; };
 		F39B2755167E53A70085D61A /* graphics.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = graphics.mm; sourceTree = "<group>"; };
+		F39B275D1683BD280085D61A /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		F39B27641683BE120085D61A /* OcrTest.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OcrTest.octest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F39B27651683BE120085D61A /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
+		F39B27671683BE120085D61A /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		F39B276B1683BE120085D61A /* OcrTest-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "OcrTest-Info.plist"; sourceTree = "<group>"; };
+		F39B276D1683BE120085D61A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		F39B276F1683BE120085D61A /* OcrTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OcrTest.h; sourceTree = "<group>"; };
+		F39B27701683BE120085D61A /* OcrTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OcrTest.m; sourceTree = "<group>"; };
+		F39B27721683BE120085D61A /* OcrTest-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "OcrTest-Prefix.pch"; sourceTree = "<group>"; };
 		F3DCACAC1568106F00134670 /* MyNSImageView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyNSImageView.h; sourceTree = "<group>"; };
 		F3DCACAD1568106F00134670 /* MyNSImageView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyNSImageView.m; sourceTree = "<group>"; };
 		F3E7425A16793B7000EED3B1 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = ../../../../System/Library/Frameworks/Accelerate.framework; sourceTree = "<group>"; };
@@ -55,9 +69,19 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F39B275E1683BD280085D61A /* SenTestingKit.framework in Frameworks */,
 				F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */,
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
 				F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F39B27601683BE110085D61A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F39B27661683BE120085D61A /* SenTestingKit.framework in Frameworks */,
+				F39B27681683BE120085D61A /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -97,6 +121,7 @@
 			isa = PBXGroup;
 			children = (
 				8D1107320486CEB800E47090 /* dsptest1.app */,
+				F39B27641683BE120085D61A /* OcrTest.octest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -104,6 +129,7 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F39B275D1683BD280085D61A /* SenTestingKit.framework */,
 				F39B2755167E53A70085D61A /* graphics.mm */,
 				F39B2754167E537C0085D61A /* graphics.h */,
 				F39B2749167BCAE70085D61A /* util.h */,
@@ -114,6 +140,7 @@
 				080E96DDFE201D6D7F000001 /* Classes */,
 				29B97315FDCFA39411CA2CEA /* Other Sources */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
+				F39B27691683BE120085D61A /* OcrTest */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 				F32C1ED514E30B1600C594FB /* dsptestview.h */,
@@ -147,9 +174,31 @@
 			isa = PBXGroup;
 			children = (
 				1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */,
+				F39B27651683BE120085D61A /* SenTestingKit.framework */,
+				F39B27671683BE120085D61A /* Cocoa.framework */,
 				1058C7A2FEA54F0111CA2CBB /* Other Frameworks */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F39B27691683BE120085D61A /* OcrTest */ = {
+			isa = PBXGroup;
+			children = (
+				F39B276F1683BE120085D61A /* OcrTest.h */,
+				F39B27701683BE120085D61A /* OcrTest.m */,
+				F39B276A1683BE120085D61A /* Supporting Files */,
+			);
+			path = OcrTest;
+			sourceTree = "<group>";
+		};
+		F39B276A1683BE120085D61A /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				F39B276B1683BE120085D61A /* OcrTest-Info.plist */,
+				F39B276C1683BE120085D61A /* InfoPlist.strings */,
+				F39B27721683BE120085D61A /* OcrTest-Prefix.pch */,
+			);
+			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -173,6 +222,24 @@
 			productReference = 8D1107320486CEB800E47090 /* dsptest1.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F39B27631683BE110085D61A /* OcrTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F39B27731683BE120085D61A /* Build configuration list for PBXNativeTarget "OcrTest" */;
+			buildPhases = (
+				F39B275F1683BE110085D61A /* Sources */,
+				F39B27601683BE110085D61A /* Frameworks */,
+				F39B27611683BE110085D61A /* Resources */,
+				F39B27621683BE110085D61A /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = OcrTest;
+			productName = OcrTest;
+			productReference = F39B27641683BE120085D61A /* OcrTest.octest */;
+			productType = "com.apple.product-type.bundle";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -187,12 +254,14 @@
 				Japanese,
 				French,
 				German,
+				en,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* dsptest1 */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				8D1107260486CEB800E47090 /* dsptest1 */,
+				F39B27631683BE110085D61A /* OcrTest */,
 			);
 		};
 /* End PBXProject section */
@@ -208,7 +277,31 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F39B27611683BE110085D61A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F39B276E1683BE120085D61A /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		F39B27621683BE110085D61A /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Run the unit tests in this test bundle.\n\"${SYSTEM_DEVELOPER_DIR}/Tools/RunUnitTests\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8D11072C0486CEB800E47090 /* Sources */ = {
@@ -222,6 +315,14 @@
 				F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */,
 				F39B2748167BCADC0085D61A /* util.mm in Sources */,
 				F39B2756167E53A70085D61A /* graphics.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F39B275F1683BE110085D61A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F39B27711683BE120085D61A /* OcrTest.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -244,6 +345,14 @@
 			name = MainMenu.xib;
 			sourceTree = "<group>";
 		};
+		F39B276C1683BE120085D61A /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				F39B276D1683BE120085D61A /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -252,6 +361,10 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_APPS_DIR)/Xcode.app/Contents/Developer/Library/Frameworks\"",
+				);
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
@@ -273,6 +386,10 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_APPS_DIR)/Xcode.app/Contents/Developer/Library/Frameworks\"",
+				);
 				GCC_MODEL_TUNING = G5;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = dsptest1_Prefix.pch;
@@ -314,6 +431,63 @@
 			};
 			name = Release;
 		};
+		F39B27741683BE120085D61A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "OcrTest/OcrTest-Prefix.pch";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				INFOPLIST_FILE = "OcrTest/OcrTest-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Debug;
+		};
+		F39B27751683BE120085D61A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				FRAMEWORK_SEARCH_PATHS = "\"$(DEVELOPER_LIBRARY_DIR)/Frameworks\"";
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "OcrTest/OcrTest-Prefix.pch";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				INFOPLIST_FILE = "OcrTest/OcrTest-Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = octest;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -331,6 +505,15 @@
 			buildConfigurations = (
 				C01FCF4F08A954540054247B /* Debug */,
 				C01FCF5008A954540054247B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F39B27731683BE120085D61A /* Build configuration list for PBXNativeTarget "OcrTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F39B27741683BE120085D61A /* Debug */,
+				F39B27751683BE120085D61A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
