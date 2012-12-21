@@ -16,6 +16,9 @@ void rgb_convert_to_lum(const unsigned char *inbuf, unsigned char *lumbuf,
 void rgb_convert_to_bw_treshold(const unsigned char *inbuf, unsigned char *lumbuf,
                                 int width, int height, int bitsPerPixel,
                                 int treshold);
+void rgb_convert_canny_to_code(const unsigned char *inbuf, unsigned char *lumbuf,
+                               int width, int height, int bitsPerPixel);
+
 void histogram(const unsigned char *inbuf, unsigned int *histogram,
                int inleft, int intop,
                int inwidth,

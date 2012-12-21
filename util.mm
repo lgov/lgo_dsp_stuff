@@ -33,6 +33,7 @@ typedef struct {
 	short int xmin;
 	short int xmax;
 	short int y;
+    short int r,g,b,e; /* 4 colors representing 'canny' edges. */
 } conn_line_t;
 
 /**
@@ -41,14 +42,15 @@ typedef struct {
  *
  * input:
  *  bounding_boxes:
- *  newlist:
+ *  newlist: first element is a ((NSValue*)conn_box_t), all the following
+ *           are ((NSValue*)conn_line_t)
  *  max_xdelta:
  *  max_ydelta:
  *  merge_lines: if FALSE merge bounding boxes only (pixels don't need to be
  *               connected), if TRUE actual lines/pixels need to be connected.
  **/
 static void
-merge(NSMutableArray* bounding_boxes, NSArray* newlist,
+merge(NSMutableArray* bounding_boxes, const NSArray* newlist,
       short int max_xdelta, short int max_ydelta, bool merge_lines)
 {
 	for(NSMutableArray* list in bounding_boxes) {
@@ -57,84 +59,132 @@ merge(NSMutableArray* bounding_boxes, NSArray* newlist,
         NSValue* bbval = [list objectAtIndex:0];
         conn_box_t box;
         [bbval getValue:&box];
-
+        
         NSValue* bbnewval = [newlist objectAtIndex:0];
         conn_box_t newbox;
         [bbnewval getValue:&newbox];
 
         // iff bounding boxes overlap, check the individual lines.
-        if ((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) ||
-            (box.ymax >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
-            (box.ymin >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
-            (box.ymin <= newbox.ymin-max_ydelta && box.ymax >= newbox.ymax+max_ydelta)) {
-            if ((box.xmin >= newbox.xmin-max_xdelta && box.xmin <= newbox.xmax+max_xdelta) ||
-                (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
-                (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
-                (box.xmin <= newbox.xmin-max_xdelta && box.xmax >= newbox.xmax+max_xdelta)) {
+        if (!((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) ||
+              (box.ymax >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
+              (box.ymin >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
+              (box.ymin <= newbox.ymin-max_ydelta && box.ymax >= newbox.ymax+max_ydelta)))
+        {
+            /* bounding boxes vertical axis don't overlap. */
+            continue;
+        }
 
-                if (!merge_lines) {
-                    box.xmin = std::min(box.xmin, newbox.xmin);
-                    box.ymin = std::min(box.ymin, newbox.ymin);
-                    box.xmax = std::max(box.xmax, newbox.xmax);
-                    box.ymax = std::max(box.ymax, newbox.ymax);
+        if (!((box.xmin >= newbox.xmin-max_xdelta && box.xmin <= newbox.xmax+max_xdelta) ||
+              (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
+              (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
+              (box.xmin <= newbox.xmin-max_xdelta && box.xmax >= newbox.xmax+max_xdelta)))
+        {
+            /* bounding boxes horizontal axis don't overlap. */
+            continue;
+        }
+        
+        /* Bounding boxes overlap! */
+        if (!merge_lines)
+        {
+            /* Merge the bounding boxes, add lines from second bounding
+             box to first. */
+            box.xmin = std::min(box.xmin, newbox.xmin);
+            box.ymin = std::min(box.ymin, newbox.ymin);
+            box.xmax = std::max(box.xmax, newbox.xmax);
+            box.ymax = std::max(box.ymax, newbox.ymax);
+            box.e += newbox.e; box.r += newbox.r;
+            box.g += newbox.g; box.b += newbox.b;
 
-                    NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
-                    [list replaceObjectAtIndex:0 withObject:new_bboxval];
+            NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
+            [list replaceObjectAtIndex:0 withObject:new_bboxval];
 
-                    // add all but the first element.
-                    NSRange theRange;
-                    theRange.location = 1;
-                    theRange.length = [newlist count] -1;
-                    [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
+            // add all lines (all but the first element).
+            NSRange theRange;
+            theRange.location = 1;
+            theRange.length = [newlist count] -1;
+            [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
 
-                    return;
-                }
+            return;
+        }
 
-                for(NSValue* crval in list) {
-                    if (bbval == crval) // skip first element.
-                        continue;
+        /* Check that pixels are connected. */
+        for(NSValue* crval in list) {
+            if (bbval == crval) // skip bounding box (first element).
+                continue;
 
-                    conn_line_t comp;
-                    [crval getValue:&comp];
+            conn_line_t comp;
+            [crval getValue:&comp];
 
-                    for(NSValue* newval in newlist) {
-                        if (bbnewval == newval) // skip first element
-                            continue;
+            for(NSValue* newval in newlist) {
+                if (bbnewval == newval) // skip first element
+                    continue;
 
-                        conn_line_t newcomp;
-                        [newval getValue:&newcomp];
+                conn_line_t newcomp;
+                [newval getValue:&newcomp];
 
-                        // lines connected?
-                        if (comp.y >= newcomp.y-max_ydelta && comp.y <= newcomp.y+max_ydelta) {
-                            if ((comp.xmin >= newcomp.xmin-max_xdelta && comp.xmin <= newcomp.xmax+max_xdelta) ||
-                                (comp.xmax >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
-                                (comp.xmin >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
-                                (comp.xmin <= newcomp.xmin-max_xdelta && comp.xmax >= newcomp.xmax+max_xdelta)) {
-                                // yes
-                                box.xmin = std::min(box.xmin, newbox.xmin);
-                                box.ymin = std::min(box.ymin, newbox.ymin);
-                                box.xmax = std::max(box.xmax, newbox.xmax);
-                                box.ymax = std::max(box.ymax, newbox.ymax);
+                // lines connected?
+                if (comp.y >= newcomp.y-max_ydelta && comp.y <= newcomp.y+max_ydelta) {
+                    if ((comp.xmin >= newcomp.xmin-max_xdelta && comp.xmin <= newcomp.xmax+max_xdelta) ||
+                        (comp.xmax >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
+                        (comp.xmin >= newcomp.xmin-max_xdelta && comp.xmax <= newcomp.xmax+max_xdelta) ||
+                        (comp.xmin <= newcomp.xmin-max_xdelta && comp.xmax >= newcomp.xmax+max_xdelta)) {
+                        // yes
+                        /* Merge the bounding boxes, add lines from second bounding
+                         box to first. */
+                        box.xmin = std::min(box.xmin, newbox.xmin);
+                        box.ymin = std::min(box.ymin, newbox.ymin);
+                        box.xmax = std::max(box.xmax, newbox.xmax);
+                        box.ymax = std::max(box.ymax, newbox.ymax);
+                        box.e += newbox.e; box.r += newbox.r;
+                        box.g += newbox.g; box.b += newbox.b;
 
-                                NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
-                                [list replaceObjectAtIndex:0 withObject:new_bboxval];
+                        NSValue *new_bboxval = [[NSValue alloc] initWithBytes:&(box) objCType:@encode(conn_box_t)];
+                        [list replaceObjectAtIndex:0 withObject:new_bboxval];
 
-                                // add all but the first element.
-                                NSRange theRange;
-                                theRange.location = 1;
-                                theRange.length = [newlist count] -1;
-                                [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
-                                
-                                return;
-                            }
-                        }
+                        // add all but the first element.
+                        NSRange theRange;
+                        theRange.location = 1;
+                        theRange.length = [newlist count] -1;
+                        [list addObjectsFromArray:[newlist subarrayWithRange:theRange]];
+
+                        return;
                     }
                 }
             }
         }
     }
-    
+
     [bounding_boxes addObject:newlist];
+}
+
+/** Remove lines
+ *
+ **/
+static NSArray*
+remove_long_lines(const NSArray* comps, int width, int height)
+{
+    NSMutableArray* result = [[NSMutableArray alloc] init];
+
+    for(int i = 0; i < [comps count]; i++)
+    {
+        NSArray* list = [comps objectAtIndex:i];
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        int total = box.e + box.r + box.g + box.b;
+
+        if ((box.e * 100 / total) > 80 ||
+            (box.r * 100 / total) > 80 ||
+            (box.g * 100 / total) > 80 ||
+            (box.b * 100 / total) > 80)
+        {
+            continue;
+        }
+
+        [result addObject:list];
+    }
+    return result;
 }
 
 /**
@@ -150,7 +200,7 @@ remove_overlapping(const NSArray* comps, int width, int height)
        grouping component. */
     const int minwidth = 10;
     const int minheight = 10;
-    const int maxChildComps = 4;
+    const int maxChildComps = 2;
 
     NSMutableArray* result = [[NSMutableArray alloc] init];
 
@@ -202,8 +252,6 @@ remove_overlapping(const NSArray* comps, int width, int height)
         [result addObject:list];
     }
 
-    
-
     return result;
 }
 
@@ -211,21 +259,23 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
 {
     int size, prev_size = 0;
     bool first_run = true;
-
-    NSArray* result = remove_overlapping(lines, width, height);
+    NSArray* result;
+    
+//    NSArray* result = remove_long_lines(lines, width, height);
+    result = remove_overlapping(lines, width, height);
     size = [result count];
 
-#if 0
     /* Cleanup and merging parameters */
     const int maxwidth = (width * 3) / 4;
     const int maxheight = (height * 3) / 4;
-    const int maxXdelta = 10;
+    const int maxXdelta = 2;
     const int maxYdelta = 2;
+    const int minwidth = 8;
+    const int minheight = 8;
 
     // combine small components into characters
     // skip too large components
     // keep merging bounding boxes until the minimum is reached.
-    
     /* Merge components in larger groups, preferably along the horizontal
        axis. */
     while (size != prev_size && size != 1)
@@ -254,7 +304,6 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
         first_run = false;
     }
 
-
     /* Cleanup the almost final group of connected components:
        - remove bounding boxes that are too small */
     NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
@@ -264,8 +313,8 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
         [bbval getValue:&box];
 
         // skip too small
-        if ((box.xmax - box.xmin < 5) ||
-            (box.ymax - box.ymin < 5))
+        if ((box.xmax - box.xmin < minwidth) ||
+            (box.ymax - box.ymin < minheight))
         {
             dsptest_log(LOG_BB, __FILE__,
                         " remove too small bounding box: (%d,%d)-(%d,%d)\n",
@@ -276,8 +325,7 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
         [bounding_boxes addObject:list];
     }
     result = bounding_boxes;
-
-// #if 0
+#if 0
     // combine words into phrases
     // keep merging bounding boxes until minimum number was reached.
     size = [lines count], prev_size = 0;
@@ -311,28 +359,35 @@ NSArray* connected_binary(const unsigned char *inptr, int width, int height)
 {
 	const unsigned char* cur;
     conn_line_t *cur_line = 0l;
+    const int maxwidth = width / 2;
 
     NSMutableArray* lines = [[NSMutableArray alloc] init];
 
-    // colors should be either 0 (OFF) or 255 (ON). Use <128 or >= 128 as check
+    // colors should be either 0 (OFF) or 255 (ON). Use 0 or > 0 as check
     // just to be sure.
 
 	// find horizontal lines of ON pixels
     for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width;) {
             // select a line of connected ON pixels
-            for (cur = inptr + y * width + x ; x < width && (*cur++) >= 128 ; x++) {
+            for (cur = inptr + y * width + x ; x < width && (*cur) > 0 ; cur++, x++) {
                 if (!cur_line) {
                     cur_line = (conn_line_t *)malloc(sizeof(conn_line_t));
-
+                    cur_line->e = cur_line->r = cur_line->g = cur_line->b = 0;
                     cur_line->y = y;
                     cur_line->xmin = cur_line->xmax = x;
                 } else {
                     cur_line->xmax = x;
                 }
+                switch (*cur) {
+                    case 0: break;
+                    case 1: cur_line->e++;break;
+                    case 2: cur_line->r++;break;
+                    case 3: cur_line->g++;break;
+                    case 4: cur_line->b++;break;
+                }
             }
             if (cur_line) {
-                const int maxwidth = width / 2;
                 if (cur_line->xmax - cur_line->xmin > maxwidth) {
                     cur_line = 0l;
                     continue;
@@ -342,7 +397,10 @@ NSArray* connected_binary(const unsigned char *inptr, int width, int height)
                 NSMutableArray *newcomp = [[NSMutableArray alloc] init];
 
                 conn_box_t *cur_bbox = (conn_box_t *)malloc(sizeof(conn_box_t));
-                cur_bbox->xmin = cur_line->xmin; cur_bbox->xmax = cur_line->xmax; cur_bbox->ymin = cur_bbox->ymax = cur_line->y;
+                cur_bbox->e = cur_line->e; cur_bbox->r = cur_line->r;
+                cur_bbox->g = cur_line->g; cur_bbox->b = cur_line->b;
+                cur_bbox->xmin = cur_line->xmin; cur_bbox->xmax = cur_line->xmax;
+                cur_bbox->ymin = cur_bbox->ymax = cur_line->y;
                 NSValue *cur_bboxval = [[NSValue alloc] initWithBytes:&(*cur_bbox) objCType:@encode(conn_box_t)];
                 [newcomp addObject:cur_bboxval];
 
@@ -356,6 +414,8 @@ NSArray* connected_binary(const unsigned char *inptr, int width, int height)
             }
         }
     }
+
+//    lines = remove_long_lines(lines, width, height);
 
     // combine connected components
     int size = [lines count], prev_size = 0;
@@ -415,8 +475,11 @@ void log_bounding_boxes(const NSArray* lines)
         conn_box_t box;
         [bbval getValue:&box];
 
-        dsptest_log(LOG_BB, __FILE__, "bounding box: (%d,%d)-(%d,%d)\n",
-                    box.xmin, box.ymin, box.xmax, box.ymax);
+        int total = box.e + box.r + box.g + box.b;
+        dsptest_log(LOG_BB, __FILE__,
+                    "bounding box: (%d,%d)-(%d,%d) y:%d,r:%d,g:%d,b:%d\n",
+                    box.xmin, box.ymin, box.xmax, box.ymax,
+                    (box.e * 100)/total, (box.r * 100)/total, (box.g * 100)/total, (box.b * 100)/total);
     }
 }
 

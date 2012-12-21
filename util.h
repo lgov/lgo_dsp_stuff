@@ -20,6 +20,7 @@ typedef struct {
 	short int xmax;
 	short int ymin;
     short int ymax;
+    short int r,g,b,e; /* 4 colors representing 'canny' edges. */
 } conn_box_t;
 
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height);

@@ -76,8 +76,8 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 {
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
-    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/iphone-prime.png";
+    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/iphone-prime.png";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/test_small.jpg";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/el_secreto_de_sus_ojos.JPG";
@@ -164,17 +164,17 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
-	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
-    NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
-    //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
+	rgb_convert_canny_to_code(outputImgBytes, lum_edge, width, height, bitsPerPixel);
+    NSArray *conn_lines = connected_binary(lum_edge, width, height);
+    
     dsptest_log(LOG_BB, __FILE__, "Log connected components\n");
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
-    log_bounding_boxes(bounding_boxes);
+    log_bounding_boxes(conn_lines);
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
 
     // draw bounding boxes on screen.
-    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
-    draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
+//    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, conn_lines, width, height, bitsPerPixel);
 
     /* Finished */
 	[imageView setImage:outImage];
@@ -201,7 +201,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
-	rgb_convert_to_bw_treshold(outputImgBytes, lum_edge, width, height, bitsPerPixel, 1);
+	rgb_convert_canny_to_code(outputImgBytes, lum_edge, width, height, bitsPerPixel);
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
@@ -213,7 +213,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
 
     // draw bounding boxes on screen.
-    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
+//    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
 
     /* Finished */
@@ -262,7 +262,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 - (IBAction)ocr:(id)sender
 {
 	tessocr* ocr = [[tessocr alloc] init];
-    
+
     int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];

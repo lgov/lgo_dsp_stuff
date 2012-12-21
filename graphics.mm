@@ -291,6 +291,47 @@ void sobel_edge_detection(const unsigned char *inlum, unsigned char *outlum,
 	}
 }
 
+typedef enum canny_codes_t {
+    black = 0,
+    yellow = 1,
+    red = 2,
+    green = 3,
+    blue = 4
+} canny_codes_t;
+
+void rgb_convert_canny_to_code(const unsigned char *inbuf, unsigned char *lumbuf,
+                               int width, int height, int bitsPerPixel)
+{
+	int rowPixels = width * bitsPerPixel / 8;
+
+	for (int y = 0; y < height; y++) {
+		int yloc = y * rowPixels;
+		unsigned char *lumptr = lumbuf + y * width;
+
+		for (int x = 0; x < width; x++) {
+			int xloc = x * bitsPerPixel / 8;
+
+			const unsigned char *curin = inbuf + yloc + xloc;
+
+			unsigned char r = *curin++, g = *curin++, b = *curin++;
+            canny_codes_t code;
+
+            if (b == 255)
+                code = blue;
+            else if (r == 255 && g == 255)
+                code = yellow;
+            else if (r == 255)
+                code = red;
+            else if (g == 255)
+                code = green;
+            else
+                code = black;
+
+			*lumptr++ = (unsigned char)code;
+		}
+	}
+}
+
 // http://dasl.mem.drexel.edu/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html
 void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
                           int width, int height, int bitsperpixel)
