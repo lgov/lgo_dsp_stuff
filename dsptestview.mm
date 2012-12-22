@@ -15,22 +15,6 @@
 
 @implementation dsptestview
 
-
-void binarization_bounding_boxes(unsigned char *inlum, unsigned char *outlum, NSArray* lines,
-                                 int width, int height)
-{
-    for(NSArray* list in lines) {
-        NSValue* bbval = [list objectAtIndex:0];
-        conn_box_t box;
-        [bbval getValue:&box];
-
-        binarization(inlum, outlum,
-                     box.xmin, box.ymin, width,
-                     box.xmax - box.xmin, box.ymax - box.ymin,
-                     box.xmin, box.ymin, height);
-    }
-}
-
 void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
                          int width, int height, int bitsPerPixel)
 {

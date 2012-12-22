@@ -19,6 +19,7 @@
 		F39B27681683BE120085D61A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F39B27671683BE120085D61A /* Cocoa.framework */; };
 		F39B276E1683BE120085D61A /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = F39B276C1683BE120085D61A /* InfoPlist.strings */; };
 		F39B27711683BE120085D61A /* OcrTest.m in Sources */ = {isa = PBXBuildFile; fileRef = F39B27701683BE120085D61A /* OcrTest.m */; };
+		F39B277E1685B21B0085D61A /* recognizer.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B277D1685B21B0085D61A /* recognizer.mm */; };
 		F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */ = {isa = PBXBuildFile; fileRef = F3DCACAD1568106F00134670 /* MyNSImageView.m */; };
 		F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F3E7425A16793B7000EED3B1 /* Accelerate.framework */; };
 		F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3FE478C153956CF00CA9DDF /* tessocr.mm */; };
@@ -54,6 +55,8 @@
 		F39B276F1683BE120085D61A /* OcrTest.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = OcrTest.h; sourceTree = "<group>"; };
 		F39B27701683BE120085D61A /* OcrTest.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = OcrTest.m; sourceTree = "<group>"; };
 		F39B27721683BE120085D61A /* OcrTest-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "OcrTest-Prefix.pch"; sourceTree = "<group>"; };
+		F39B277C1685B20B0085D61A /* recognizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = recognizer.h; sourceTree = "<group>"; };
+		F39B277D1685B21B0085D61A /* recognizer.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = recognizer.mm; sourceTree = "<group>"; };
 		F3DCACAC1568106F00134670 /* MyNSImageView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MyNSImageView.h; sourceTree = "<group>"; };
 		F3DCACAD1568106F00134670 /* MyNSImageView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MyNSImageView.m; sourceTree = "<group>"; };
 		F3E7425A16793B7000EED3B1 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = ../../../../System/Library/Frameworks/Accelerate.framework; sourceTree = "<group>"; };
@@ -127,6 +130,8 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F39B277C1685B20B0085D61A /* recognizer.h */,
+				F39B277D1685B21B0085D61A /* recognizer.mm */,
 				F39B275D1683BD280085D61A /* SenTestingKit.framework */,
 				F39B2755167E53A70085D61A /* graphics.mm */,
 				F39B2754167E537C0085D61A /* graphics.h */,
@@ -313,6 +318,7 @@
 				F3DCACAE1568106F00134670 /* MyNSImageView.m in Sources */,
 				F39B2748167BCADC0085D61A /* util.mm in Sources */,
 				F39B2756167E53A70085D61A /* graphics.mm in Sources */,
+				F39B277E1685B21B0085D61A /* recognizer.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

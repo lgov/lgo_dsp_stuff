@@ -11,6 +11,7 @@
 #include <algorithm>
 
 #include "util.h"
+#include "graphics.h"
 
 /* Logging function.
  Use with one of the [COMP]_VERBOSE defines so that the compiler knows to
@@ -526,4 +527,22 @@ char* filter_ocr_string(const char *txt)
         return 0l;
 
     return result;
+}
+
+
+void
+binarization_bounding_boxes(const unsigned char *inlum, unsigned char *outlum,
+                            const NSArray* lines,
+                            int width, int height)
+{
+    for(NSArray* list in lines) {
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        binarization(inlum, outlum,
+                     box.xmin, box.ymin, width,
+                     box.xmax - box.xmin, box.ymax - box.ymin,
+                     box.xmin, box.ymin, height);
+    }
 }

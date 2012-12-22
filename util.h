@@ -23,6 +23,10 @@ typedef struct {
     short int r,g,b,e; /* 4 colors representing 'canny' edges. */
 } conn_box_t;
 
+void binarization_bounding_boxes(const unsigned char *inlum,
+                                 unsigned char *outlum,
+                                 const NSArray* lines,
+                                 int width, int height);
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height);
 void log_bounding_boxes(const NSArray* lines);
 NSArray* connected_binary(const unsigned char *inptr, int width, int height);
