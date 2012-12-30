@@ -7,7 +7,7 @@
 //
 
 #import "tessocr.h"
-
+#include "util.h"
 
 @implementation tessocr
 
@@ -19,6 +19,9 @@
 				 width:(int)width
 				height:(int)height;
 {
+    dsptest_log(LOG_OCR, __FILE__,
+                "Pass image in bounding box (%d,%d)-(%d,%d) to TesseractRect.\n",
+                left, top, left+width, top+height);
 
 	// this could take a while. maybe needs to happen asynchronously.
 	char* text = tess->TesseractRect(imagedata,(int)bytes_per_pixel,(int)bytes_per_line,
@@ -30,7 +33,7 @@
 -(id)init
 {
     if (self = [super init]) {
-		NSString* dataPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingString:@"/Contents/Resources/"];
+		NSString* dataPath = [[[NSBundle bundleForClass:[tessocr class]] bundlePath] stringByAppendingString:@"/Contents/Resources/"];
 //		NSString* dataPath = @"/Users/lgo/macdev/tesseract-ocr/tessdata";
 //		NSString *dataPathWithSlash = [dataPath stringByAppendingString:@"/"];
 		const char* dataPathDirectoryCString = [dataPath cStringUsingEncoding:NSUTF8StringEncoding];

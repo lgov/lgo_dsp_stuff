@@ -60,7 +60,7 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 {
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
-    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
+//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/iphone-prime.png";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/test_small.jpg";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
@@ -71,7 +71,7 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 //	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/frits_and_freddy.jpg";
 //  NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/a_single_man.jpg";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/canny_test.jpg";
-	image = [[NSImage alloc] initWithContentsOfFile:imageName];
+	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_bonw.jpg";
 
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
