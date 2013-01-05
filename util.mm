@@ -65,20 +65,22 @@ merge(NSMutableArray* bounding_boxes, const NSArray* newlist,
         conn_box_t newbox;
         [bbnewval getValue:&newbox];
 
+        /* Scenario's:
+           1. |     2. |     3.   |  4.  |
+              | |      | |      | |    | |
+              |          |      |        |
+         */
+
         // iff bounding boxes overlap, check the individual lines.
-        if (!((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) ||
-              (box.ymax >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
-              (box.ymin >= newbox.ymin-max_ydelta && box.ymax <= newbox.ymax+max_ydelta) ||
-              (box.ymin <= newbox.ymin-max_ydelta && box.ymax >= newbox.ymax+max_ydelta)))
+        if (!((box.ymin >= newbox.ymin-max_ydelta && box.ymin <= newbox.ymax+max_ydelta) || // 3 & 4
+              (newbox.ymin >= box.ymin-max_ydelta && newbox.ymin <= box.ymax+max_ydelta)))  // 1 & 2
         {
             /* bounding boxes vertical axis don't overlap. */
             continue;
         }
 
         if (!((box.xmin >= newbox.xmin-max_xdelta && box.xmin <= newbox.xmax+max_xdelta) ||
-              (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
-              (box.xmax >= newbox.xmin-max_xdelta && box.xmax <= newbox.xmax+max_xdelta) ||
-              (box.xmin <= newbox.xmin-max_xdelta && box.xmax >= newbox.xmax+max_xdelta)))
+              (newbox.xmin >= box.xmin-max_xdelta && newbox.xmin <= box.xmax+max_xdelta)))
         {
             /* bounding boxes horizontal axis don't overlap. */
             continue;
@@ -258,19 +260,20 @@ remove_overlapping(const NSArray* comps, int width, int height)
 
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
 {
-    int size, prev_size = 0;
+    size_t size, prev_size = 0;
     bool first_run = true;
     NSArray* result;
-    
+
+    /* Remove boxes that are completely overlapped by other boxes. */
 //    NSArray* result = remove_long_lines(lines, width, height);
     result = remove_overlapping(lines, width, height);
     size = [result count];
 
     /* Cleanup and merging parameters */
-    const int maxwidth = (width * 3) / 4;
-    const int maxheight = (height * 3) / 4;
-    const int maxXdelta = 2;
-    const int maxYdelta = 2;
+    const int maxwidth = width; // (width * 3) / 4;
+    const int maxheight = height; // (height * 3) / 4;
+//    const int maxXdelta = 2;
+//    const int maxYdelta = 2;
     const int minwidth = 8;
     const int minheight = 8;
 
@@ -298,10 +301,14 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
                                 box.xmin, box.ymin, box.xmax, box.ymax);
                     continue;
                 }
+
+            int maxXdelta = box.xmax - box.xmin;
+            int maxYdelta = 2;
+
             merge(bounding_boxes, list, maxXdelta, maxYdelta, false);
         }
         result = bounding_boxes;
-        size = [lines count];
+        size = [result count];
         first_run = false;
     }
 
@@ -326,27 +333,6 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
         [bounding_boxes addObject:list];
     }
     result = bounding_boxes;
-#if 0
-    // combine words into phrases
-    // keep merging bounding boxes until minimum number was reached.
-    size = [lines count], prev_size = 0;
-    while (size != prev_size && size != 1)
-    {
-        prev_size = size;
-
-        NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
-        for(NSArray* list in lines) {
-            NSValue* bbval = [list objectAtIndex:0];
-            conn_box_t box;
-            [bbval getValue:&box];
-
-            merge(bounding_boxes, list, 10, 0, FALSE);
-        }
-        lines = bounding_boxes;
-        size = [lines count];
-    }
-    
-#endif
     
 	return result;
 }

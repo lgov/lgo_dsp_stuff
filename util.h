@@ -11,6 +11,7 @@
 
 #define LOG_BB 1
 #define LOG_OCR 1
+#define LOG_TEST 1
 
 void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
 
