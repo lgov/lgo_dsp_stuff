@@ -8,6 +8,9 @@
 
 #import <SenTestingKit/SenTestingKit.h>
 
-@interface OcrTest : SenTestCase
-
+@interface OcrTest : SenTestCase {
+    NSMutableDictionary *editDistances;
+}
+- (int) calc_editDistance:(NSString *)a
+                        b:(NSString *)b;
 @end

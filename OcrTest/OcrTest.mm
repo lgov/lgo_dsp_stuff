@@ -18,14 +18,56 @@
 {
     [super setUp];
     
+    editDistances = [[NSMutableDictionary alloc] init];
+
     // Set-up code here.
+    dsptest_log(LOG_TEST, NULL, "------------------------------------------------------\n");
 }
 
 - (void)tearDown
 {
     // Tear-down code here.
-    
+    [editDistances release];
+
     [super tearDown];
+    dsptest_log(LOG_TEST, NULL, "======================================================\n");
+}
+
+/* Calculate and return the Levenshteint distance between two strings. */
+- (int) calc_editDistance:(NSString *)a
+                        b:(NSString *)b
+{
+    NSInteger lenA = [a length];
+    NSInteger lenB = [b length];
+    int cost = 0;
+
+    NSString* key = [NSString stringWithFormat:@"%@/%ld//%@/%ld", a, lenA, b, lenB];
+    id dist = [editDistances objectForKey:key];
+    if (dist != nil)
+        return (int)[dist integerValue];
+
+    /* Store distances between known string */
+    if (lenA == 0) return (int)lenB;
+    if (lenB == 0) return (int)lenA;
+
+    /* Cost of 1 if current characters not equal */
+    if ([a characterAtIndex:0] != [b characterAtIndex:0]) cost = 1;
+
+    /* Calculate the total cost of the remaining characters in both strings.
+       Three possible operations: Delete character, Insert character or
+                                  Modify character */
+    int delCost = [self calc_editDistance:[a substringFromIndex:1] b:b] + 1;
+    int insCost = [self calc_editDistance:a b:[b substringFromIndex:1]] + 1;
+    int modCost = [self calc_editDistance:[a substringFromIndex:1]
+                                        b:[b substringFromIndex:1]] + cost;
+
+    /* Take the minimum of the possible costs for the remaining characters. */
+    int min = delCost < insCost ? delCost : insCost;
+    min = min < modCost ? min : modCost;
+
+    [editDistances setObject:[NSNumber numberWithInteger:min] forKey:key];
+
+    return min;
 }
 
 static unsigned char *
@@ -62,26 +104,35 @@ typedef struct {
     size_t len;
 } str_t;
 
-static bool
-all_lines_found_ignore_order(NSArray *names, const str_t *expected,
-                             size_t exp_len)
+- (int) all_lines_found_ignore_order:(NSArray *)actual
+                            expected:(const str_t *)expected
+                             exp_len:(size_t)exp_len
+                     minEditDistance:(int)minEditDistance
 {
     bool result = true;
-    NSMutableArray *not_found = [[NSMutableArray alloc] initWithArray:names];
+    NSMutableArray *not_found = [[NSMutableArray alloc] initWithArray:actual];
     /* The same amount of lines, check that the expected lines are in the
        actually returned array. */
     for (int i = 0; i < exp_len; i++)
     {
-        NSString *str = [[NSString alloc] initWithUTF8String:expected[i].str];
-        
-        NSUInteger index =[names indexOfObject:str];
-        if (index == NSNotFound) {
+        NSString *a = [[NSString alloc] initWithUTF8String:expected[i].str];
+        NSString *b = nil;
+        int cost = 100000;
+
+        for (b in actual)
+        {
+            cost = [self calc_editDistance:a b:b];
+            if (cost <= minEditDistance)
+                break;
+        }
+        if (cost > minEditDistance) {
             result = false;
             break;
         }
 
-        [not_found removeObjectAtIndex:index];
-        dsptest_log(LOG_TEST, __FILE__, "Found line: %s\n", expected[i].str);
+        [not_found removeObjectIdenticalTo:b];
+        dsptest_log(LOG_TEST, __FILE__, "Found expected '%s' for '%s' (distance %d)\n", expected[i].str,
+                    [b cStringUsingEncoding:NSUTF8StringEncoding], cost);
     }
 
     /* Log the remaining lines unexpectedly returned by the ocr engine. */
@@ -106,16 +157,17 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
                             width:width
                            height:height];
 
-    STAssertTrue(
-                 all_lines_found_ignore_order(names, expected, exp_len),
-                 nil);
+    STAssertTrue([self all_lines_found_ignore_order:names
+                                           expected:expected
+                                            exp_len:exp_len
+                                    minEditDistance:2], nil);
 
 }
 
 #define STR(x)\
   { (x), sizeof(x) }
 
-- (void) testA_blackOnWhite
+- (void) test_blackOnWhite_A
 {
     const str_t expected[] = { STR("A") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_bonw.jpg";
@@ -125,7 +177,7 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
                   exp_len:sizeof(expected)/sizeof(expected[0])];
 }
 
-- (void) testA_whiteOnBlack
+- (void) test_whiteOnBlack_A
 {
     const str_t expected[] = { STR("A") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
@@ -139,7 +191,7 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
 /**
  * no slope, white text on black background.
  */
-- (void) testA_wOnB_code_banks
+- (void) test_WonB_code_banks
 {
     const str_t expected[] = { STR("Agent Cody Banks 2: Destination London") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/agent_cody_banks.jpg";
@@ -152,7 +204,7 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
 /**
  * small slope, white text on black background.
  */
-- (void) testA_wOnB_code_banks_slope
+- (void) test_WonB_code_banks_slope
 {
     const str_t expected[] = { STR("Agent Cody Banks 2: Destination London") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/agent_cody_banks_slope.jpg";
@@ -165,7 +217,7 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
 /**
  * large font, no slope, white on gray background.
  */
-- (void) testA_wOnG_el_wong
+- (void) test_WonG_el
 {
     const str_t expected[] = { STR("El") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_wong.jpg";
@@ -178,9 +230,9 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
 /**
  * large font, no slope, white on gray background.
  */
-- (void) testA_wOnG_el_secreto_wong
+- (void) test_WonG_el_secreto
 {
-    const str_t expected[] = { STR("El Secreto de Sus Ojos") };
+    const str_t expected[] = { STR("El Secreto") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_secreto_wong.jpg";
 
     [self recognizer_test:imageName
@@ -191,7 +243,7 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
 /**
  * large font, no slope, white on gray background.
  */
-- (void) testA_wOnG_el_secreto_de_sus_ojos_wong
+- (void) test_WonG_el_secreto_de_sus_ojos
 {
     const str_t expected[] = { STR("El Secreto de Sus Ojos") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_secreto_de_sus_ojos.jpg";
@@ -201,6 +253,50 @@ all_lines_found_ignore_order(NSArray *names, const str_t *expected,
                   exp_len:sizeof(expected)/sizeof(expected[0])];
 }
 
+/**
+ * Test to ensure a grouping component (border around the text) is not dropped
+ * because too many children (the inner circle of the two o's and the d.).
+ */
+- (void) test_BonW_London
+{
+    const str_t expected[] = { STR("London") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/london_bonw.jpg";
 
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+/**
+ * Same test as BonW_London but inverted colors.
+ */
+- (void) test_WonB_London
+{
+    const str_t expected[] = { STR("London") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/london_wonb.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+- (void) test_calcDistance
+{
+    STAssertEquals([self calc_editDistance:@"A" b:@"A"], 0, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"B"], 1, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"aA"], 1, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"aaaaaaA"], 6, nil);
+    STAssertEquals([self calc_editDistance:@"aaaA" b:@"aaaaaaA"], 3, nil);
+    STAssertEquals([self calc_editDistance:@"aaaaaaA" b:@"aaaA"], 3, nil);
+    STAssertEquals([self calc_editDistance:@"London" b:@"Londen"], 1, nil);
+    STAssertEquals([self calc_editDistance:@"El Secreto de Sus Ojos"
+                                      b:@"El Secrcto de Sus Ojos"], 1, nil);
+    STAssertEquals([self calc_editDistance:@"Agent Cody Banks 2: Destination London"
+                                         b:@"Agent Cody Ianks 2: Destination London"],
+                   1, nil);
+    STAssertEquals([self calc_editDistance:@"Agent Cody Banks 2: Destination London"
+                                         b:@"Agnnt  Innis 2;: Dnﬂnatlon London"],
+                   14, nil);
+}
 
 @end
