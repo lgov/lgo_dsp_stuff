@@ -16,13 +16,19 @@
 void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
 
 /* Connected components and bounding boxes */
-typedef struct {
+
+@interface conn_box_t : NSObject {
+    @public     // TODO: change all these to properties
 	short int xmin;
 	short int xmax;
 	short int ymin;
     short int ymax;
     short int r,g,b,e; /* 4 colors representing 'canny' edges. */
-} conn_box_t;
+
+    /* collection of lines of connected pixels */
+    NSMutableArray *lines;
+}
+@end
 
 void binarization_bounding_boxes(const unsigned char *inlum,
                                  unsigned char *outlum,

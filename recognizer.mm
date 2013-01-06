@@ -39,19 +39,16 @@
     binarization_bounding_boxes(inlum, lumtemp, bounding_boxes, width, height);
 
     /*** Step 5: OCR of binarized bounding boxes ***/
-    for(NSArray* list in bounding_boxes)
+    for(conn_box_t *box in bounding_boxes)
     {
-        NSValue* bbval = [list objectAtIndex:0];
-        conn_box_t bb;
-        [bbval getValue:&bb];
         const char* ocr_text =
         [ocr run_tesseract:lumtemp
            bytes_per_pixel:1
             bytes_per_line:width
-                      left:bb.xmin
-                       top:bb.ymin
-                     width:bb.xmax - bb.xmin
-                    height:bb.ymax - bb.ymin
+                      left:box->xmin
+                       top:box->ymin
+                     width:box->xmax - box->xmin
+                    height:box->ymax - box->ymin
          ];
         char* text = filter_ocr_string(ocr_text);
         if (text)

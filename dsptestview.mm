@@ -15,40 +15,35 @@
 
 @implementation dsptestview
 
-void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
+void draw_bounding_boxes(unsigned char *outptr, NSArray *comps,
                          int width, int height, int bitsPerPixel)
 {
-    for(NSArray* list in lines) {
-        NSValue* bbval = [list objectAtIndex:0];
-        conn_box_t box;
-        [bbval getValue:&box];
-
-		// TODO: cleanup all compranges in the set.
-
+    for(conn_box_t *box in comps)
+    {
 		// draw a blue bounding box
-		for (int x = box.xmin; x < box.xmax; x++) {
+		for (int x = box->xmin; x < box->xmax; x++) {
 			int xloc = x * bitsPerPixel / 8;
 			// top
-			int yloc = box.ymin * width * bitsPerPixel / 8;
+			int yloc = box->ymin * width * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
 			// bottom
-			yloc = box.ymax * width * bitsPerPixel / 8;
+			yloc = box->ymax * width * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
 		}
 
-		for (int y = box.ymin; y < box.ymax; y++) {
+		for (int y = box->ymin; y < box->ymax; y++) {
 			int yloc = y * width * bitsPerPixel / 8;
 
-			int xloc = box.xmin * bitsPerPixel / 8;
+			int xloc = box->xmin * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
 
-			xloc = box.xmax * bitsPerPixel / 8;
+			xloc = box->xmax * bitsPerPixel / 8;
 			*(outptr + xloc + yloc) = 255;
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
@@ -72,7 +67,7 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray* lines,
 //  NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/a_single_man.jpg";
 //    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/canny_test.jpg";
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_wong.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/one_line_border_wong.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
@@ -283,18 +278,15 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 	[imageView setImage:outImage];
 
     /*** Step 5: OCR of binarized bounding boxes ***/
-    for(NSArray* list in bounding_boxes) {
-        NSValue* bbval = [list objectAtIndex:0];
-		conn_box_t bb;
-		[bbval getValue:&bb];
+    for(conn_box_t *box in bounding_boxes) {
 		const char* ocr_text =
                     [ocr run_tesseract:lumbuf
 						bytes_per_pixel:1
 						 bytes_per_line:width
-								   left:bb.xmin
-									top:bb.ymin
-								  width:bb.xmax - bb.xmin
-								 height:bb.ymax - bb.ymin
+								   left:box->xmin
+									top:box->ymin
+								  width:box->xmax - box->xmin
+								 height:box->ymax - box->ymin
 					  ];
         char* text = filter_ocr_string(ocr_text);
         if (text)
