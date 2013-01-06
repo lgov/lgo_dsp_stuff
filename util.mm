@@ -197,14 +197,11 @@ remove_long_lines(const NSArray* comps, int width, int height)
  * background.
  **/
 static NSArray*
-remove_overlapping(const NSArray* comps, int width, int height)
+remove_overlapping(const NSArray* comps,
+                   int minWidth, int minHeight, int maxChildComps)
 {
-    /* If box is smaller than this with or height, it's probably not a
+    /* If box is smaller than minwidth or minheight, it's probably not a
        grouping component. */
-    const int minwidth = 10;
-    const int minheight = 10;
-    const int maxChildComps = 2;
-
     NSMutableArray* result = [[NSMutableArray alloc] init];
 
     for(int i = 0; i < [comps count]; i++)
@@ -214,8 +211,8 @@ remove_overlapping(const NSArray* comps, int width, int height)
         conn_box_t box;
         [bbval getValue:&box];
 
-        if ((box.xmax - box.xmin > minwidth) &&
-            (box.ymax - box.ymin > minheight))
+        if ((box.xmax - box.xmin > minWidth) &&
+            (box.ymax - box.ymin > minHeight))
         {
             int childComps = 0;
 
@@ -258,24 +255,81 @@ remove_overlapping(const NSArray* comps, int width, int height)
     return result;
 }
 
+/* Returns a new array of connected components, from which all those that
+   are either wider than maxWidth and/or bigger than maxHeight are removed. */
+static NSArray*
+remove_too_big(const NSArray* comps, int maxWidth, int maxHeight)
+{
+    NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
+    for(NSArray* list in comps) {
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        // skip too big
+        if ((box.xmax - box.xmin > maxWidth) ||
+            (box.ymax - box.ymin > maxHeight))
+        {
+            dsptest_log(LOG_BB, __FILE__,
+                        " remove too big bounding box: (%d,%d)-(%d,%d)\n",
+                        box.xmin, box.ymin, box.xmax, box.ymax);
+            continue;
+        }
+        [bounding_boxes addObject:list];
+    }
+
+    return bounding_boxes;
+}
+
+/* Returns a new array of connected components, from which all those that
+   are either smaller than minWidth and/or shorter than minHeight are removed. */
+static NSArray*
+remove_too_small(const NSArray* comps, int minWidth, int minHeight)
+{
+    NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
+    for(NSArray* list in comps) {
+        NSValue* bbval = [list objectAtIndex:0];
+        conn_box_t box;
+        [bbval getValue:&box];
+
+        // skip too small
+        if ((box.xmax - box.xmin < minWidth) ||
+            (box.ymax - box.ymin < minHeight))
+        {
+            dsptest_log(LOG_BB, __FILE__,
+                        " remove too small bounding box: (%d,%d)-(%d,%d)\n",
+                        box.xmin, box.ymin, box.xmax, box.ymax);
+
+            continue;
+        }
+        [bounding_boxes addObject:list];
+    }
+
+    return bounding_boxes;
+}
+
 NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
 {
     size_t size, prev_size = 0;
-    bool first_run = true;
     NSArray* result;
 
+    //    NSArray* result = remove_long_lines(lines, width, height);
+
     /* Remove boxes that are completely overlapped by other boxes. */
-//    NSArray* result = remove_long_lines(lines, width, height);
-    result = remove_overlapping(lines, width, height);
-    size = [result count];
+    const int minWidth = 10;
+    const int minHeight = 10;
+    const int maxChildComps = 2;
+    result = remove_overlapping(lines, minWidth, minHeight, maxChildComps);
 
     /* Cleanup and merging parameters */
-    const int maxwidth = width; // (width * 3) / 4;
-    const int maxheight = height; // (height * 3) / 4;
+    const int maxWidth = width; // (width * 3) / 4;
+    const int maxHeight = height; // (height * 3) / 4;
 //    const int maxXdelta = 2;
 //    const int maxYdelta = 2;
-    const int minwidth = 8;
-    const int minheight = 8;
+
+    result = remove_too_big(result, maxWidth, maxHeight);
+
+    size = [result count];
 
     // combine small components into characters
     // skip too large components
@@ -292,16 +346,6 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
             conn_box_t box;
             [bbval getValue:&box];
 
-            if (first_run)
-                if ((box.xmax - box.xmin > maxwidth) ||
-                    (box.ymax - box.ymin > maxheight))
-                {
-                    dsptest_log(LOG_BB, __FILE__,
-                                " remove too big bounding box: (%d,%d)-(%d,%d)\n",
-                                box.xmin, box.ymin, box.xmax, box.ymax);
-                    continue;
-                }
-
             int maxXdelta = box.xmax - box.xmin;
             int maxYdelta = 2;
 
@@ -309,30 +353,9 @@ NSArray* group_bounding_boxes(const NSArray* lines, int width, int height)
         }
         result = bounding_boxes;
         size = [result count];
-        first_run = false;
     }
 
-    /* Cleanup the almost final group of connected components:
-       - remove bounding boxes that are too small */
-    NSMutableArray* bounding_boxes = [[NSMutableArray alloc] init];
-    for(NSArray* list in result) {
-        NSValue* bbval = [list objectAtIndex:0];
-        conn_box_t box;
-        [bbval getValue:&box];
-
-        // skip too small
-        if ((box.xmax - box.xmin < minwidth) ||
-            (box.ymax - box.ymin < minheight))
-        {
-            dsptest_log(LOG_BB, __FILE__,
-                        " remove too small bounding box: (%d,%d)-(%d,%d)\n",
-                        box.xmin, box.ymin, box.xmax, box.ymax);
-
-            continue;
-        }
-        [bounding_boxes addObject:list];
-    }
-    result = bounding_boxes;
+    result = remove_too_small(result, minWidth, minHeight);
     
 	return result;
 }
