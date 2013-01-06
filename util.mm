@@ -381,7 +381,7 @@ NSArray* connected_binary(const unsigned char *inptr, int width, int height)
 //    lines = remove_long_lines(lines, width, height);
 
     // combine connected components
-    int size = [comps count], prev_size = 0;
+    size_t size = [comps count], prev_size = 0;
     while (size != prev_size && size != 1)
     {
         prev_size = size;
@@ -454,7 +454,7 @@ char* filter_ocr_string(const char *txt)
         return 0l;
 
     /* String too long */
-    int len = strlen(txt);
+    size_t len = strlen(txt);
     if (len > 1024)
         return 0l;
     result = (char*)malloc(len);
