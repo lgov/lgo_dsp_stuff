@@ -155,11 +155,15 @@ void convolution(const unsigned char *lumin, int *outptr,
 	// calculate convolution of one pixel!
 	for (int i = 0; i < matrixSize; i++) {
 		int yloc = (y + (i - offset)) * width;
-		if (yloc < 0 || (y + (i - offset)) >= height) continue;
+		if (yloc < 0 || (y + (i - offset)) >= height) {
+            yloc = (y + ((matrixSize / 2) - offset)) * width;
+        }
 
 		for (int j= 0; j < matrixSize; j++) {
 			int xloc = x + (j - offset);
-			if (xloc < 0 || (x + (j - offset)) >= width) continue;
+			if (xloc < 0 || (x + (j - offset)) >= width) {
+                xloc = x + ((matrixSize / 2) - offset);
+            }
 
 			incur = lumin + yloc + xloc;
 			int m = *(matrix + (i * matrixSize) + j);
