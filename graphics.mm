@@ -550,7 +550,7 @@ void binarization_threshold(const unsigned char* inlum, unsigned char* outlum,
 		for (int x = 0; x < boxwidth; x++) {
 
 			curin = inlum + (((y + intop) * inwidth) + (x + inleft));
-			curout = outlum + (((y + outtop) * inwidth) + (x + outleft));
+			curout = outlum + (((y + outtop) * outwidth) + (x + outleft));
 
             unsigned char lum = *curin;
 
