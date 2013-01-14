@@ -11,21 +11,18 @@
 
 @implementation tessocr
 
-- (char*)run_tesseract:(const unsigned char*)imagedata
-	   bytes_per_pixel:(int)bytes_per_pixel
-		bytes_per_line:(int)bytes_per_line
-				  left:(int)left
-				   top:(int)top
-				 width:(int)width
-				height:(int)height;
+- (char*)run_tesseract:(const conn_box_t *)box;
 {
+    int width = box->xmax - box->xmin;
+    int height = box->ymax - box->ymin;
+
     dsptest_log(LOG_OCR, __FILE__,
                 "Pass image in bounding box (%d,%d)-(%d,%d) to TesseractRect.\n",
-                left, top, left+width, top+height);
+                box->xmin, box->ymin, box->xmin+width, box->ymin+height);
 
 	// this could take a while. maybe needs to happen asynchronously.
-	char* text = tess->TesseractRect(imagedata,(int)bytes_per_pixel,(int)bytes_per_line,
-									 left, top, width, height);
+	char* text = tess->TesseractRect(box->img, 1, width,
+									 0, 0, width, height);
 
 	return text;
 }

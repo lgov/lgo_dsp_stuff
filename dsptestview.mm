@@ -15,13 +15,14 @@
 
 @implementation dsptestview
 
-void draw_bounding_boxes(unsigned char *outptr, NSArray *comps,
-                         int width, int height, int bitsPerPixel)
+static void
+draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
+                    int width, int height, int bitsPerPixel)
 {
     for(conn_box_t *box in comps)
     {
-		// draw a blue bounding box
-		for (int x = box->xmin; x < box->xmax; x++) {
+		// draw a red bounding box
+		for (int x = box->xmin; x <= box->xmax; x++) {
 			int xloc = x * bitsPerPixel / 8;
 			// top
 			int yloc = box->ymin * width * bitsPerPixel / 8;
@@ -35,7 +36,7 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray *comps,
 			*(outptr + xloc + yloc + 2) = 0;
 		}
 
-		for (int y = box->ymin; y < box->ymax; y++) {
+		for (int y = box->ymin; y <= box->ymax; y++) {
 			int yloc = y * width * bitsPerPixel / 8;
 
 			int xloc = box->xmin * bitsPerPixel / 8;
@@ -53,21 +54,8 @@ void draw_bounding_boxes(unsigned char *outptr, NSArray *comps,
 
 - (void) awakeFromNib
 {
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/replica_state_license_plate.gif";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_topcorner.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/iphone-prime.png";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/test_small.jpg";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/P1180863_lessbright.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/el_secreto_de_sus_ojos.JPG";
-//	 NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/agent_cody_banks.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/IMG_0002_treshold.JPG";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/radio days.jpg";
-//	NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/frits_and_freddy.jpg";
-//  NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/a_single_man.jpg";
-//    NSString* imageName = @"/Users/lgo/macdev/ProjectNrOne/tvgids-fotos/canny_test.jpg";
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/one_line_border_wong.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_secreto_de_sus_ojos.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
@@ -112,8 +100,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
     /*** Step 1: Edge detection ***/
 	rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
+
     canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
-//    gaussian_blur(lumin, lumbuf, width, height);
 //    sobel_edge_detection(lumbuf, lum_edge, width, height);
 
     /* Finished */
@@ -144,16 +132,26 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_canny_to_code(outputImgBytes, lum_edge, width, height, bitsPerPixel);
-    NSArray *conn_lines = connected_binary(lum_edge, width, height);
+    const NSArray *comps = connected_binary(lum_edge, width, height);
+
+    /*** Step 2b: Group into characters ***/
+    const int maxCharDeltaX = 2;
+    const int maxCharDeltaY= 2;
+    comps = group_into_characters(comps, maxCharDeltaX, maxCharDeltaY);
+#if 0
+    const int minWidth = 6;
+    const int minHeight = 6;
+    comps = remove_too_small(comps, minWidth, minHeight);
+#endif
     
     dsptest_log(LOG_BB, __FILE__, "Log connected components\n");
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
-    log_bounding_boxes(conn_lines);
+    log_bounding_boxes(comps);
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
 
     // draw bounding boxes on screen.
 //    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
-    draw_bounding_boxes(outputImgBytes, conn_lines, width, height, bitsPerPixel);
+    draw_bounding_boxes(outputImgBytes, comps, width, height, bitsPerPixel);
 
     /* Finished */
 	[imageView setImage:outImage];
@@ -185,7 +183,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
+    bounding_boxes = group_into_lines(bounding_boxes, width, height);
+    
     dsptest_log(LOG_BB, __FILE__, "Log grouped connected components\n");
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
     log_bounding_boxes(bounding_boxes);
@@ -224,10 +223,10 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
+    bounding_boxes = group_into_lines(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
-    binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
+    binarization_bounding_boxes(lumin, bounding_boxes, width, height);
     //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
 
     // draw bounding boxes on screen.
@@ -266,10 +265,10 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
+    bounding_boxes = group_into_lines(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
-    binarization_bounding_boxes(lumin, lumbuf, bounding_boxes, width, height);
+    binarization_bounding_boxes(lumin, bounding_boxes, width, height);
 
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
@@ -279,15 +278,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
     /*** Step 5: OCR of binarized bounding boxes ***/
     for(conn_box_t *box in bounding_boxes) {
-		const char* ocr_text =
-                    [ocr run_tesseract:lumbuf
-						bytes_per_pixel:1
-						 bytes_per_line:width
-								   left:box->xmin
-									top:box->ymin
-								  width:box->xmax - box->xmin
-								 height:box->ymax - box->ymin
-					  ];
+		const char* ocr_text = [ocr run_tesseract:box];
         char* text = filter_ocr_string(ocr_text);
         if (text)
             dsptest_log(LOG_OCR, __FILE__, "found line: %s\n", text);

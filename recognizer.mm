@@ -33,23 +33,15 @@
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
     /*** Step 3: Group bounding boxes ***/
-    bounding_boxes = group_bounding_boxes(bounding_boxes, width, height);
+    bounding_boxes = group_into_lines(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
-    binarization_bounding_boxes(inlum, lumtemp, bounding_boxes, width, height);
+    binarization_bounding_boxes(inlum, bounding_boxes, width, height);
 
     /*** Step 5: OCR of binarized bounding boxes ***/
     for(conn_box_t *box in bounding_boxes)
     {
-        const char* ocr_text =
-        [ocr run_tesseract:lumtemp
-           bytes_per_pixel:1
-            bytes_per_line:width
-                      left:box->xmin
-                       top:box->ymin
-                     width:box->xmax - box->xmin
-                    height:box->ymax - box->ymin
-         ];
+        const char* ocr_text = [ocr run_tesseract:box];
         char* text = filter_ocr_string(ocr_text);
         if (text)
         {

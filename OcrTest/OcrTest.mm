@@ -191,7 +191,7 @@ typedef struct {
 /**
  * no slope, white text on black background.
  */
-- (void) test_WonB_code_banks
+- (void) test_WonB_cody_banks
 {
     const str_t expected[] = { STR("Agent Cody Banks 2: Destination London") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/agent_cody_banks.jpg";
@@ -204,7 +204,7 @@ typedef struct {
 /**
  * small slope, white text on black background.
  */
-- (void) test_WonB_code_banks_slope
+- (void) test_WonB_cody_banks_slope
 {
     const str_t expected[] = { STR("Agent Cody Banks 2: Destination London") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/agent_cody_banks_slope.jpg";
@@ -241,7 +241,7 @@ typedef struct {
 }
 
 /**
- * large font, no slope, white on gray background.
+ * large font, no slope, white on gray background + border
  */
 - (void) test_WonG_el_secreto_de_sus_ojos
 {
@@ -274,6 +274,45 @@ typedef struct {
 {
     const str_t expected[] = { STR("London") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/london_wonb.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+/**
+ * Text with border (touches the text by one pixel).
+ */
+- (void) test_WonB_El_Traspatio_border
+{
+    const str_t expected[] = { STR("London") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_traspatio_border_wong.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+/**
+ * Text with border.
+ */
+- (void) test_BonW_border_text
+{
+    const str_t expected[] = { STR("TEKST") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/border_text_bonw.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+/**
+ * Text with border (touches the text by one pixel).
+ */
+- (void) test_BonW_border_text_connected
+{
+    const str_t expected[] = { STR("TEKST") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/border_text_conn_bonw.jpg";
 
     [self recognizer_test:imageName
                  expected:expected

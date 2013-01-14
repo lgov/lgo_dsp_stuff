@@ -8,19 +8,14 @@
 
 #import <Cocoa/Cocoa.h>
 #import "baseapi.h"
+#import "util.h"
 
 using namespace tesseract;
 
 @interface tessocr : NSObject {
 	TessBaseAPI* tess;
 }
-- (char*)run_tesseract:(const unsigned char*)imagedata
-	   bytes_per_pixel:(int)bytes_per_pixel
-		bytes_per_line:(int)bytes_per_line
-				  left:(int)left
-				   top:(int)top
-				 width:(int)width
-				height:(int)height;
+- (char*)run_tesseract:(const conn_box_t*)box;
 
 -(id)init;
 -(void)dealloc;

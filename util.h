@@ -27,16 +27,24 @@ void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
 
     /* collection of lines of connected pixels */
     NSMutableArray *lines;
+
+    /* Image buffer for this box, 8 bits per pixel. */
+    unsigned char *img;
+
+    bool dontMerge;
 }
 @end
 
 void binarization_bounding_boxes(const unsigned char *inlum,
-                                 unsigned char *outlum,
-                                 const NSArray* lines,
+                                 const NSArray* comps,
                                  int width, int height);
-NSArray* group_bounding_boxes(const NSArray* lines, int width, int height);
-void log_bounding_boxes(const NSArray* lines);
+NSArray* group_into_characters(const NSArray* comps, int width, int height);
+NSArray* group_into_lines(const NSArray* comps, int width, int height);
+void log_bounding_boxes(const NSArray* comps);
 NSArray* connected_binary(const unsigned char *inptr, int width, int height);
 char* filter_ocr_string(const char *txt);
+
+/* for debugging only */
+NSArray* remove_too_small(const NSArray* comps, int minWidth, int minHeight);
 
 #endif

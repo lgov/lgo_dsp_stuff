@@ -42,4 +42,5 @@ void binarization_threshold(const unsigned char* inlum, unsigned char* outlum,
                             int threshold);
 void sobel_edge_detection(const unsigned char *inlum, unsigned char *outlum,
                           int width, int height);
+
 #endif
