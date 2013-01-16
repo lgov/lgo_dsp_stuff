@@ -55,7 +55,7 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
 - (void) awakeFromNib
 {
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_secreto_de_sus_ojos.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/border_text_slope_wong.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
@@ -138,12 +138,11 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     const int maxCharDeltaX = 2;
     const int maxCharDeltaY= 2;
     comps = group_into_characters(comps, maxCharDeltaX, maxCharDeltaY);
-#if 0
+
     const int minWidth = 6;
     const int minHeight = 6;
     comps = remove_too_small(comps, minWidth, minHeight);
-#endif
-    
+
     dsptest_log(LOG_BB, __FILE__, "Log connected components\n");
     dsptest_log(LOG_BB, __FILE__, "===========================================\n");
     log_bounding_boxes(comps);

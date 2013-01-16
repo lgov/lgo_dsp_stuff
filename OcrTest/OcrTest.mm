@@ -285,7 +285,7 @@ typedef struct {
  */
 - (void) test_WonB_El_Traspatio_border
 {
-    const str_t expected[] = { STR("London") };
+    const str_t expected[] = { STR("El Traspatio") };
     NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/el_traspatio_border_wong.jpg";
 
     [self recognizer_test:imageName

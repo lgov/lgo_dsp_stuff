@@ -65,7 +65,7 @@ merge(NSMutableArray* bounding_boxes, const conn_box_t *newbox,
 	for(conn_box_t* box in bounding_boxes) {
 		// find component connected with our new component
 
-        if (box->dontMerge)
+        if (newbox->dontMergeWith == box)
             continue;
 
         /* Scenario's:
@@ -157,7 +157,8 @@ merge(NSMutableArray* bounding_boxes, const conn_box_t *newbox,
  */
 static NSArray *
 limit_box_to_region(const conn_box_t *box,
-                    int top, int left, int bottom, int right)
+                    int top, int left, int bottom, int right,
+                    int maxYdelta)
 {
 #if 0
     if (!(((box->ymin >= top && box->ymin <= bottom) ||
@@ -181,7 +182,7 @@ limit_box_to_region(const conn_box_t *box,
         conn_line_t cur_line;
         [clval getValue:&cur_line];
 
-        if (cur_line.y >= top && cur_line.y <= bottom)
+        if (cur_line.y >= top - maxYdelta && cur_line.y <= bottom + maxYdelta)
         {
             conn_box_t *cur_bbox = [[conn_box_t alloc] init];
             cur_bbox->lines = [[NSMutableArray alloc] init];
@@ -239,42 +240,31 @@ fill_in_gaps(const NSArray* comps, int maxCharDeltaX, int maxCharDeltaY)
     {
         conn_box_t *box1 = [comps objectAtIndex:i];
 
-        for(int j = i+1; j < [comps count]; j++)
+        for(int j = 0; j < [comps count]; j++)
         {
             conn_box_t *box2 = [comps objectAtIndex:j];
 
-            if (!(abs(((box1->ymax + box1->ymin) / 2) -
-                      ((box2->ymax + box2->ymin) / 2)) < 5 &&
-                  abs((box1->ymax - box1->ymin) -
-                      (box2->ymax - box2->ymin)) < 5))
-            {
+            if (box1 == box2)
                 continue;
-            }
 
-            /* Found a box on the same line */
-            for(int k = 0; k < [comps count]; k++)
+            NSArray *boxes;
+            boxes = limit_box_to_region(box2,
+                                        box1->ymin,
+                                        box2->xmin,
+                                        box1->ymax,
+                                        box2->xmax,
+                                        3);
+            if (boxes && [boxes count] > 0)
             {
-                conn_box_t *box3 = [comps objectAtIndex:k];
+                boxes = group_into_characters(boxes,
+                                              maxCharDeltaX, maxCharDeltaY);
+                for (conn_box_t *tb in boxes)
+                    tb->dontMergeWith = box2;
 
-                if (box3 == box1 || box3 == box2)
-                    continue;
-
-                NSArray *boxes;
-                boxes = limit_box_to_region(box3,
-                                            std::min(box1->ymin, box2->ymin),
-                                            std::min(box1->xmin, box2->xmin),
-                                            std::max(box1->ymax, box2->ymax),
-                                            std::max(box1->xmax, box2->xmax));
-                if ([boxes count] > 0)
-                {
-                    box3->dontMerge = true;
-                    boxes = group_into_characters(boxes,
-                                                  maxCharDeltaX, maxCharDeltaY);
-                    [result addObjectsFromArray:boxes];
-                }
+                [result addObjectsFromArray:boxes];
             }
         }
-        
+
         [result addObject:box1];
     }
 
@@ -408,11 +398,6 @@ group(const NSArray* comps, int maxCharDeltaX, int maxCharDeltaY,
         outcomps = [[NSMutableArray alloc] init];
         for (conn_box_t *box in incomps)
         {
-            if (box->dontMerge) {
-                [outcomps addObject:box];
-                continue;
-            }
-
             // skip a few empty pixels, but not more.
             merge(outcomps, box, maxCharDeltaX, maxCharDeltaY,
                   maxHeightDev, merge_lines);
@@ -490,6 +475,12 @@ group_into_lines(const NSArray* comps, int width, int height)
     incomps = group(incomps, maxXdelta, maxYdelta, maxHeightDev, false);
 
     incomps = fill_in_gaps(incomps, maxCharDeltaX, maxCharDeltaY);
+#if 0
+    dsptest_log(LOG_BB, __FILE__, "|||||||||||||||||||||||||||||||||||||||||||\n");
+    log_bounding_boxes(incomps);
+    dsptest_log(LOG_BB, __FILE__, "|||||||||||||||||||||||||||||||||||||||||||\n");
+#endif
+
     outcomps = group(incomps, maxXdelta, maxYdelta, maxHeightDev, false);
 
 	return outcomps;
@@ -545,7 +536,7 @@ NSArray* connected_binary(const unsigned char *inptr, int width, int height)
                 cur_bbox->xmin = cur_line->xmin; cur_bbox->xmax = cur_line->xmax;
                 cur_bbox->ymin = cur_bbox->ymax = cur_line->y;
                 cur_bbox->lines = [[NSMutableArray alloc] init];
-                cur_bbox->dontMerge = false;
+                cur_bbox->dontMergeWith = NULL;
 
                 NSValue *cur_lineval = [[NSValue alloc] initWithBytes:&(*cur_line) objCType:@encode(conn_line_t)];
                 [cur_bbox->lines addObject:cur_lineval];

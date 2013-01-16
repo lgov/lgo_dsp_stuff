@@ -31,7 +31,7 @@ void dsptest_log(int verbose_flag, const char *filename, const char *fmt, ...);
     /* Image buffer for this box, 8 bits per pixel. */
     unsigned char *img;
 
-    bool dontMerge;
+    conn_box_t *dontMergeWith;
 }
 @end
 
