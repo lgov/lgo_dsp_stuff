@@ -25,7 +25,8 @@ void histogram(const unsigned char *inbuf, unsigned int *histogram,
                int boxwidth, int boxheight);
 
 void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
-                          int width, int height, int bitsperpixel);
+                          int width, int height, int bitsperpixel,
+                          double *avg_slope);
 
 void binarization(const unsigned char* inlum, unsigned char* outlum,
                   int inleft, int intop,
@@ -42,5 +43,7 @@ void binarization_threshold(const unsigned char* inlum, unsigned char* outlum,
                             int threshold);
 void sobel_edge_detection(const unsigned char *inlum, unsigned char *outlum,
                           int width, int height);
+void rotate(const unsigned char *lumbuf, unsigned char *outlum,
+            int width, int height, double slope);
 
 #endif

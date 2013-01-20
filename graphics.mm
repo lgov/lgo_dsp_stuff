@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include "graphics.h"
-// #include "util.h"
+#include "util.h"
 
 static const int sharpen[3][3]  = { { -1, -1, -1 },
     { -1,  8, -1 },
@@ -338,7 +338,8 @@ void rgb_convert_canny_to_code(const unsigned char *inbuf, unsigned char *lumbuf
 
 // http://dasl.mem.drexel.edu/alumni/bGreen/www.pages.drexel.edu/_weg22/can_tut.html
 void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
-                          int width, int height, int bitsperpixel)
+                          int width, int height, int bitsperpixel,
+                          double *avg_slope)
 {
     unsigned char* templum = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* gradiants = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -357,6 +358,8 @@ void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
     int Gx, Gy, strength;
 	int min = 0, max = 0;
     unsigned char *outptr, *strengthptr, *gradptr;
+    double slope = 0, slope_y = 0, slope_r = 0, slope_g = 0, slope_b = 0;
+    long cur_y = 0, cur_r = 0, cur_g = 0, cur_b = 0;
 
  	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
@@ -387,14 +390,22 @@ void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
                 }
                 edge_dir = atan2(Gx, Gy) * 180 / PI;
 
+                /* Calculate the general slope of the image:
+                   Take the average angle for each major orientation.
+                 */
                 // assign edge to range
                 if (((edge_dir < 22.5) && (edge_dir > -22.5)) || (edge_dir > 157.5) || (edge_dir < -157.5)) {
+                    edge_dir += 270; edge_dir = fmod(edge_dir, 180);
+                    slope_y = ((slope_y * cur_y) + edge_dir) / (++cur_y);
                     edge_dir = 0;
                     *outptr++ = 255; *outptr++ = 255; *outptr++ = 0; *outptr = 0; // yellow
                 } else if (((edge_dir > 22.5) && (edge_dir < 67.5)) || ((edge_dir < -112.5) && (edge_dir > -157.5))) {
                     edge_dir = 45;
                     *outptr++ = 0; *outptr++ = 255; *outptr++ = 0; *outptr = 0; // green
                 } else if (((edge_dir > 67.5) && (edge_dir < 112.5)) || ((edge_dir < -67.5) && (edge_dir > -112.5))) {
+                    if (edge_dir > 0) edge_dir = edge_dir; // do nothing
+                    else edge_dir = 180 + edge_dir;
+                    slope_b = ((slope_b * cur_b) + edge_dir) / (++cur_b);
                     edge_dir = 90;
                     *outptr++ = 0; *outptr++ = 0; *outptr++ = 255; *outptr = 0; // blue
                 } else if (((edge_dir > 112.5) && (edge_dir < 157.5)) || ((edge_dir < -22.5) && (edge_dir > -67.5))) {
@@ -410,6 +421,19 @@ void canny_edge_detection(const unsigned char *inlum, unsigned char *outbuf,
             *gradptr = (int)edge_dir;
 		}
 	}
+
+    /* calculate slope as angle where positive = from 0 (right) to bottom. */
+    slope_y -= 90; slope_b -= 90;
+    if (slope_y * slope_b > 0 &&      // same sign?
+        abs(slope_b - slope_y) < 2)
+    {
+        slope = ((slope_y * cur_y) + (slope_b * cur_b)) / (cur_y + cur_b);
+        dsptest_log(1, __FILE__, "Uniform slope found: %f (%f,%f)\n", slope, slope_y, slope_b);
+        *avg_slope = slope;
+    } else {
+        *avg_slope = -1000;
+    }
+
 
     // step 3: non-maximum suppression
     for (int y = 1; y < height - 1; y++) {
@@ -650,4 +674,29 @@ void prepare(const unsigned char *inlum, unsigned char *outlum,
 			*(outlum + y * width + x) = newlum;
 		}
 	}
+}
+
+void
+rotate(const unsigned char *lumbuf, unsigned char *outlum,
+       int width, int height, double slope)
+{
+    double angle = slope * M_PI / 180;
+    double ca = cos(angle); double sa = sin(angle);
+
+	for (int y = 0; y < height; y++) {
+		int yloc = y * width;
+
+		for (int x = 0; x < width; x++) {
+			unsigned char *curout = outlum + yloc + x;
+            int lx = x * ca - y * sa;
+            int ly = x * sa + y * ca;
+
+            const unsigned char *lumptr = lumbuf + ly * width + lx;
+
+            if (lx < 0 || lx >= width || ly < 0 || ly >= height)
+                *curout = 255;
+            else
+                *curout = *lumptr;
+        }
+    }
 }

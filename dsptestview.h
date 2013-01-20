@@ -12,12 +12,10 @@
 @interface dsptestview : NSObject {
 	IBOutlet MyNSImageView* imageView;
 	IBOutlet NSTextField* lbl;
-	NSImage* image;
+	NSImage* inImage;
 	NSBitmapImageRep* inImageRep;
 
 	unsigned char* inputImgBytes;
-	unsigned char* outputImgBytes;
-	unsigned char* outputImg2Bytes;
 }
 
 - (IBAction)connComps:(id)sender;
@@ -25,5 +23,10 @@
 - (IBAction)groupBoundingBoxes:(id)sender;
 - (IBAction)binarization:(id)sender;
 - (IBAction)ocr:(id)sender;
+- (NSBitmapImageRep *)rotate:(NSImage *)image
+                       width:(int)width
+                      height:(int)height
+                       angle:(double)angle
+                    imageRep:(NSBitmapImageRep *)imageRep;
 
 @end

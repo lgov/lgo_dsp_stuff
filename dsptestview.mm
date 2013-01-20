@@ -21,7 +21,29 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
 {
     for(conn_box_t *box in comps)
     {
-		// draw a red bounding box
+        if (box->img)
+        {
+            int boxwidth = box->xmax - box->xmin;
+            int boxheight = box->ymax - box->ymin;
+            
+            /* Copy box image to out image */
+            for (int y = 0; y < boxheight; y++) {
+                int yloc = (box->ymin + y) * width * bitsPerPixel / 8;
+                for (int x = 0; x < boxwidth; x++) {
+                    int xloc = (box->xmin + x) * bitsPerPixel / 8;
+
+                    unsigned char *inptr = box->img + y * boxwidth + x;
+                    unsigned char *curout = outptr + xloc + yloc;
+
+                    *curout++ = *inptr; // r
+                    *curout++ = *inptr; // g
+                    *curout++ = *inptr; // b
+                    *curout++ = 0;
+                }
+            }
+        }
+        
+        // draw a red bounding box
 		for (int x = box->xmin; x <= box->xmax; x++) {
 			int xloc = x * bitsPerPixel / 8;
 			// top
@@ -49,18 +71,20 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
 			*(outptr + xloc + yloc + 1) = 0;
 			*(outptr + xloc + yloc + 2) = 0;
 		}
+
+
 	}
 }
 
 - (void) awakeFromNib
 {
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/border_text_slope_wong.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/P1180863-800x600.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
 	if (inImageRep){
-		NSImage* inImage = [[NSImage alloc] init];
+		inImage = [[NSImage alloc] init];
 		[inImage addRepresentation:inImageRep];
 
 		inputImgBytes = [inImageRep bitmapData];
@@ -83,12 +107,13 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
             bytesPerRow:[inImageRep bytesPerRow]
             bitsPerPixel:[inImageRep bitsPerPixel]];
 }
-
+#if 0
 - (IBAction)edgeDetection:(id)sender
 {
 	int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
 	int height = [inImageRep pixelsHigh];
+    int avg_slope = 0;
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
@@ -101,7 +126,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     /*** Step 1: Edge detection ***/
 	rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
 
-    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
 //    sobel_edge_detection(lumbuf, lum_edge, width, height);
 
     /* Finished */
@@ -111,6 +136,39 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     free(lum_edge);
     free(lumbuf);
 }
+#endif
+
+- (NSBitmapImageRep *)rotate:(NSImage *)image
+                       width:(int)width
+                      height:(int)height
+                       angle:(double)angle
+                    imageRep:(NSBitmapImageRep *)imageRep
+{
+    /**
+     * Apply the following transformations:
+     *
+     * - with the rotation at the left corner (0,0).
+     * - rotate it by 90 degrees, either clock or counter clockwise.
+     */
+    NSSize size = NSMakeSize(width, height);
+    NSImage *rotatedImage = [[NSImage alloc] initWithSize:size];
+	NSBitmapImageRep *rotatedImageRep = cloneImageRep(imageRep);
+    [rotatedImage addRepresentation:rotatedImageRep];
+
+    [rotatedImage lockFocus];
+
+    NSAffineTransform *rotateTF = [NSAffineTransform transform];
+    [rotateTF rotateByDegrees:2];
+    [rotateTF concat];
+
+    NSRect r1 = NSMakeRect(0, 0, width, height);
+    [imageRep drawInRect:r1];
+
+    [rotatedImage unlockFocus];
+
+    return rotatedImageRep;
+}
+
 
 - (IBAction)connComps:(id)sender
 {
@@ -119,19 +177,28 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    double avg_slope = 0;
 
 	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
-	outputImgBytes = [outImageRep bitmapData];
+    unsigned char* outputImgBytes = [outImageRep bitmapData];
 
     /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+
+    /*** Step 2a: if slope, rotate image first ***/
+    if (avg_slope > -180)
+    {
+        rotate(lumin, lum_edge, width, height, avg_slope);
+        canny_edge_detection(lum_edge, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+    }
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_canny_to_code(outputImgBytes, lum_edge, width, height, bitsPerPixel);
+
     const NSArray *comps = connected_binary(lum_edge, width, height);
 
     /*** Step 2b: Group into characters ***/
@@ -151,7 +218,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     // draw bounding boxes on screen.
 //    lum_convert_to_rgb(lum_edge, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, comps, width, height, bitsPerPixel);
-
+    
     /* Finished */
 	[imageView setImage:outImage];
     free(lumin);
@@ -165,19 +232,28 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    double avg_slope = 0;
 
 	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
-	outputImgBytes = [outImageRep bitmapData];
+    unsigned char* outputImgBytes = [outImageRep bitmapData];
 
     /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+
+    /*** Step 2a: if slope, rotate image first ***/
+    if (avg_slope > -180)
+    {
+        rotate(lumin, lum_edge, width, height, avg_slope);
+        canny_edge_detection(lum_edge, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+    }
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
 	rgb_convert_canny_to_code(outputImgBytes, lum_edge, width, height, bitsPerPixel);
+
     NSArray *bounding_boxes = connected_binary(lum_edge, width, height);
     //    NSArray *bounding_boxes = connected_div_and_conq(lum_edge, width, height);
 
@@ -205,15 +281,23 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+    double avg_slope = 0;
 
 	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
-	outputImgBytes = [outImageRep bitmapData];
+	unsigned char *outputImgBytes = [outImageRep bitmapData];
 
     /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+
+    /*** Step 2a: if slope, rotate image first ***/
+    if (avg_slope > -180)
+    {
+        rotate(lumin, lum_edge, width, height, avg_slope);
+        canny_edge_detection(lum_edge, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+    }
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
@@ -245,16 +329,27 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 	int height = [inImageRep pixelsHigh];
     unsigned char* lumin = (unsigned char*)malloc(width * height * sizeof(unsigned char));
 	unsigned char* lum_edge = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-    unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
-
+    double avg_slope = 0;
+    
 	NSBitmapImageRep *outImageRep = cloneImageRep(inImageRep);
 	NSImage* outImage = [[[NSImage alloc] init] autorelease];
 	[outImage addRepresentation:outImageRep];
-	outputImgBytes = [outImageRep bitmapData];
+	unsigned char *outputImgBytes = [outImageRep bitmapData];
 
     /*** Step 1: Edge detection ***/
     rgb_convert_to_lum(inputImgBytes, lumin, width, height, bitsPerPixel);
-    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel);
+    canny_edge_detection(lumin, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+
+    /*** Step 2a: if slope, rotate image first ***/
+    if (avg_slope > -180)
+    {
+        unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
+        rotate(lumin, lumbuf, width, height, avg_slope);
+        canny_edge_detection(lumbuf, outputImgBytes, width, height, bitsPerPixel, &avg_slope);
+        free(lumin);
+        lumin = lumbuf;
+    }
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
@@ -270,7 +365,7 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     binarization_bounding_boxes(lumin, bounding_boxes, width, height);
 
     // draw bounding boxes on screen.
-    lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
+    lum_convert_to_rgb(lumin, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
 
 	[imageView setImage:outImage];

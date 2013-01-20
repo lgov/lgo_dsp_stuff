@@ -21,9 +21,10 @@
     unsigned char *lumtemp = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char *rgbatemp = (unsigned char*)malloc(width * height * sizeof(unsigned char) * 4);
     const int bitsPerPixel = 32;
-    
+    double avg_slope = 0;
+
     /*** Step 1: Edge detection ***/
-    canny_edge_detection(inlum, rgbatemp, width, height, bitsPerPixel);
+    canny_edge_detection(inlum, rgbatemp, width, height, bitsPerPixel, &avg_slope);
 
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
