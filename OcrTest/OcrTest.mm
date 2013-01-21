@@ -8,9 +8,12 @@
 
 #import "OcrTest.h"
 #import "recognizer.h"
+#import "fuzzy_search.h"
 
 #include "graphics.h"
 #include "util.h"
+
+#include <stdio.h>
 
 @implementation OcrTest
 
@@ -33,33 +36,60 @@
     dsptest_log(LOG_TEST, NULL, "======================================================\n");
 }
 
-/* Calculate and return the Levenshteint distance between two strings. */
-- (int) calc_editDistance:(NSString *)a
-                        b:(NSString *)b
+#if 0
+/* Calculate and return the Levenshtein distance between two strings. */
+- (int) calc_editDistance:(NSString *)a_in
+                        b:(NSString *)b_in
+          caseInsensitive:(bool)caseInsensitive
 {
-    NSInteger lenA = [a length];
-    NSInteger lenB = [b length];
     int cost = 0;
 
+    NSString *a, *b;
+    if (caseInsensitive)
+    {
+        a = [a_in lowercaseString];
+        b = [b_in lowercaseString];
+    }
+    else
+    {
+        a = a_in; b = b_in;
+    }
+
+    NSInteger lenA = [a length];
+    NSInteger lenB = [b length];
     NSString* key = [NSString stringWithFormat:@"%@/%ld//%@/%ld", a, lenA, b, lenB];
     id dist = [editDistances objectForKey:key];
     if (dist != nil)
         return (int)[dist integerValue];
 
     /* Store distances between known string */
-    if (lenA == 0) return (int)lenB;
-    if (lenB == 0) return (int)lenA;
+    if (lenA == 0) return (int)lenB * 2;
+    if (lenB == 0) return (int)lenA * 2;
 
     /* Cost of 1 if current characters not equal */
-    if ([a characterAtIndex:0] != [b characterAtIndex:0]) cost = 1;
+    unsigned short ac = [a characterAtIndex:0];
+    unsigned short bc = [b characterAtIndex:0];
+    if (ac != bc) {
+        if (((ac == 'e' || ac == 'o' || ac == 'c') &&
+             (bc == 'e' || bc == 'o' || bc == 'c')) ||
+            ((ac == 'i' || ac == 'l') &&
+             (bc == 'i' || bc == 'l')))
+        {
+            cost = 1;
+        }
+        else
+        {
+            cost = 2;
+        }
+    }
 
     /* Calculate the total cost of the remaining characters in both strings.
        Three possible operations: Delete character, Insert character or
                                   Modify character */
-    int delCost = [self calc_editDistance:[a substringFromIndex:1] b:b] + 1;
-    int insCost = [self calc_editDistance:a b:[b substringFromIndex:1]] + 1;
+    int delCost = [self calc_editDistance:[a substringFromIndex:1] b:b caseInsensitive:true] + 2;
+    int insCost = [self calc_editDistance:a b:[b substringFromIndex:1] caseInsensitive:true] + 2;
     int modCost = [self calc_editDistance:[a substringFromIndex:1]
-                                        b:[b substringFromIndex:1]] + cost;
+                                        b:[b substringFromIndex:1] caseInsensitive:true] + cost;
 
     /* Take the minimum of the possible costs for the remaining characters. */
     int min = delCost < insCost ? delCost : insCost;
@@ -121,13 +151,13 @@ typedef struct {
 
         for (b in actual)
         {
-            cost = [self calc_editDistance:a b:b];
+            cost = [self calc_editDistance:a b:b caseInsensitive:true];
             if (cost <= minEditDistance)
                 break;
         }
         if (cost > minEditDistance) {
             result = false;
-            break;
+            continue;
         }
 
         [not_found removeObjectIdenticalTo:b];
@@ -160,7 +190,7 @@ typedef struct {
     STAssertTrue([self all_lines_found_ignore_order:names
                                            expected:expected
                                             exp_len:exp_len
-                                    minEditDistance:2], nil);
+                                    minEditDistance:4], nil);
 
 }
 
@@ -319,23 +349,95 @@ typedef struct {
                   exp_len:sizeof(expected)/sizeof(expected[0])];
 }
 
+/**
+ * Text with border and slope
+ */
+- (void) test_BonW_border_text_slope
+{
+    const str_t expected[] = { STR("TEKST") };
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/border_text_slope_bonw.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
+
+/**
+ * Text with border and slope
+ */
+- (void) test_WonG_border_2lines
+{
+    const str_t expected[] = { STR("El Secreto de Sus Ojos"),
+                               STR("El Traspatio")};
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/two_lines_border_wong.jpg";
+
+    [self recognizer_test:imageName
+                 expected:expected
+                  exp_len:sizeof(expected)/sizeof(expected[0])];
+}
+
 - (void) test_calcDistance
 {
-    STAssertEquals([self calc_editDistance:@"A" b:@"A"], 0, nil);
-    STAssertEquals([self calc_editDistance:@"A" b:@"B"], 1, nil);
-    STAssertEquals([self calc_editDistance:@"A" b:@"aA"], 1, nil);
-    STAssertEquals([self calc_editDistance:@"A" b:@"aaaaaaA"], 6, nil);
-    STAssertEquals([self calc_editDistance:@"aaaA" b:@"aaaaaaA"], 3, nil);
-    STAssertEquals([self calc_editDistance:@"aaaaaaA" b:@"aaaA"], 3, nil);
-    STAssertEquals([self calc_editDistance:@"London" b:@"Londen"], 1, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"A" caseInsensitive:true], 0, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"B" caseInsensitive:true], 2, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"aA" caseInsensitive:true], 2, nil);
+    STAssertEquals([self calc_editDistance:@"A" b:@"aaaaaaA" caseInsensitive:true], 12, nil);
+    STAssertEquals([self calc_editDistance:@"aaaA" b:@"aaaaaaA" caseInsensitive:true], 6, nil);
+
+    STAssertEquals([self calc_editDistance:@"aaaaaaA" b:@"aaaA" caseInsensitive:true], 6, nil);
+    STAssertEquals([self calc_editDistance:@"London" b:@"Londen" caseInsensitive:true], 1, nil);
     STAssertEquals([self calc_editDistance:@"El Secreto de Sus Ojos"
-                                      b:@"El Secrcto de Sus Ojos"], 1, nil);
+                                      b:@"El Secrcto de Sus Ojos" caseInsensitive:true], 1, nil);
     STAssertEquals([self calc_editDistance:@"Agent Cody Banks 2: Destination London"
-                                         b:@"Agent Cody Ianks 2: Destination London"],
-                   1, nil);
+                                         b:@"Agent Cody Ianks 2: Destination London" caseInsensitive:true],
+                   2, nil);
     STAssertEquals([self calc_editDistance:@"Agent Cody Banks 2: Destination London"
-                                         b:@"Agnnt  Innis 2;: Dnﬂnatlon London"],
-                   14, nil);
+                                         b:@"Agnnt  Innis 2;: Dnﬂnatlon London" caseInsensitive:true],
+                   27, nil);
+
+    STAssertEquals([self calc_editDistance:@"a" b:@"A" caseInsensitive:true], 0, nil);
+    STAssertEquals([self calc_editDistance:@"a" b:@"A" caseInsensitive:false], 2, nil);
+}
+#endif
+
+typedef struct {
+    const char *str;
+    size_t len;
+    int weight;
+} str_weight_t;
+
+#define WSTR(x, w)\
+{ (x), sizeof(x), w }
+
+- (NSString *) fuzzy_search_test:(const str_weight_t *)dictionary
+                        dict_len:(size_t)dict_len
+{
+    fuzzy_search *fz = [[fuzzy_search alloc] init];
+    for (int i = 0; i < dict_len; i++)
+    {
+        NSString *a = [[NSString alloc] initWithUTF8String:dictionary[i].str];
+        [fz load_string:a weight:dictionary[i].weight];
+    }
+
+    weighted_str_t *wstr = [fz find_string:@"bcdi"];
+    if (wstr)
+    {
+        return wstr->str;
+    }
+
+    return nil;
+}
+
+- (void) test_FuzzySearch
+{
+    const str_weight_t expected[] = { WSTR("abcd", 40),
+        WSTR("abc", 20), WSTR("bcdef", 30)};
+
+    NSString *result = [self fuzzy_search_test:expected
+                                      dict_len:sizeof(expected)/sizeof(expected[0])];
+
+    STAssertTrue(NSOrderedSame == [result compare:@"bcdef"], @"Should be the same");
 }
 
 @end

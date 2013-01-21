@@ -12,6 +12,8 @@
 		8D11072B0486CEB800E47090 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 089C165CFE840E0CC02AAC07 /* InfoPlist.strings */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
+		F3125AE016AC6B8400877797 /* fuzzy_search.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125ADF16AC6B8400877797 /* fuzzy_search.mm */; };
+		F3125AE216AC709B00877797 /* fuzzy_search.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125ADF16AC6B8400877797 /* fuzzy_search.mm */; };
 		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F39B2748167BCADC0085D61A /* util.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2747167BCADC0085D61A /* util.mm */; };
 		F39B2756167E53A70085D61A /* graphics.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2755167E53A70085D61A /* graphics.mm */; };
@@ -46,6 +48,8 @@
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		8D1107310486CEB800E47090 /* dsptest1-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "dsptest1-Info.plist"; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* dsptest1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dsptest1.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F3125ADF16AC6B8400877797 /* fuzzy_search.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = fuzzy_search.mm; sourceTree = "<group>"; };
+		F3125AE116AC6B9D00877797 /* fuzzy_search.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fuzzy_search.h; sourceTree = "<group>"; };
 		F32C1ED514E30B1600C594FB /* dsptestview.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dsptestview.h; sourceTree = "<group>"; };
 		F32C1ED614E30B1600C594FB /* dsptestview.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = dsptestview.mm; sourceTree = "<group>"; };
 		F39B2747167BCADC0085D61A /* util.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = util.mm; sourceTree = "<group>"; };
@@ -138,6 +142,8 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F3125ADF16AC6B8400877797 /* fuzzy_search.mm */,
+				F3125AE116AC6B9D00877797 /* fuzzy_search.h */,
 				F39B277F1685C30A0085D61A /* Cocoa.framework */,
 				F39B277C1685B20B0085D61A /* recognizer.h */,
 				F39B277D1685B21B0085D61A /* recognizer.mm */,
@@ -332,6 +338,7 @@
 				F39B2748167BCADC0085D61A /* util.mm in Sources */,
 				F39B2756167E53A70085D61A /* graphics.mm in Sources */,
 				F39B277E1685B21B0085D61A /* recognizer.mm in Sources */,
+				F3125AE016AC6B8400877797 /* fuzzy_search.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,6 +351,7 @@
 				F39B27831685F1B30085D61A /* graphics.mm in Sources */,
 				F39B27841685F1B60085D61A /* util.mm in Sources */,
 				F39B27851685F1C70085D61A /* tessocr.mm in Sources */,
+				F3125AE216AC709B00877797 /* fuzzy_search.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
