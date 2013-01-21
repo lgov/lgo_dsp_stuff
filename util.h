@@ -43,6 +43,7 @@ NSArray* group_into_lines(const NSArray* comps, int width, int height);
 void log_bounding_boxes(const NSArray* comps);
 NSArray* connected_binary(const unsigned char *inptr, int width, int height);
 char* filter_ocr_string(const char *txt);
+void make_boxes_black_on_white_bg(const NSArray* comps);
 
 /* for debugging only */
 NSArray* remove_too_small(const NSArray* comps, int minWidth, int minHeight);

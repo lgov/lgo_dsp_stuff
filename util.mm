@@ -648,8 +648,8 @@ binarization_bounding_boxes(const unsigned char *inlum,
 {
     for(conn_box_t *box in comps)
     {
-        int bw = box->xmax - box->xmin;
-        int bh = box->ymax - box->ymin;
+        int bw = box->xmax - box->xmin + 1;
+        int bh = box->ymax - box->ymin + 1;
         
         box->img = (unsigned char*)malloc(bw * bh * sizeof(unsigned char));
 
@@ -658,4 +658,67 @@ binarization_bounding_boxes(const unsigned char *inlum,
                      bw, bh,
                      0, 0, bw);
     }
+}
+
+/* After binarization, make the box colors black on white, so if it's currently
+   white text on black background => invert the colors.
+ */
+void
+make_boxes_black_on_white_bg(const NSArray* comps)
+{
+    int black = 0, white = 0;
+    for(conn_box_t *box in comps)
+    {
+        int boxwidth = box->xmax - box->xmin + 1;
+        int boxheight = box->ymax - box->ymin + 1;
+        unsigned char *inptr;
+
+        /* Count the current blacks & whites off the border pixels */
+        int x,y;
+        for (x = 0; x < boxwidth; x++) {
+            // top
+            y = 0;
+            inptr = box->img + (y * boxwidth) + x;
+            if (*inptr > 128)
+                white++;
+            else
+                black++;
+			// bottom
+            y = boxheight - 1;
+            inptr = box->img + (y * boxwidth) + x;
+            if (*inptr > 128)
+                white++;
+            else
+                black++;
+		}
+
+		for (y = 0; y < boxheight; y++) {
+            // left
+            x = 0;
+            inptr = box->img + (y * boxwidth) + x;
+            if (*inptr > 128)
+                white++;
+            else
+                black++;
+			// bottom
+            x = boxwidth - 1;
+            inptr = box->img + (y * boxwidth) + x;
+            if (*inptr > 128)
+                white++;
+            else
+                black++;
+		}
+
+        if (black > white)
+        {
+            // invert colors
+            for (y = 0; y < boxheight; y++) {
+                for (x = 0; x < boxwidth; x++) {
+                    inptr = box->img + (y * boxwidth) + x;
+                    *inptr = 255 - *inptr;
+                }
+            }
+        }
+    }
+
 }

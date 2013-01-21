@@ -23,8 +23,8 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
     {
         if (box->img)
         {
-            int boxwidth = box->xmax - box->xmin;
-            int boxheight = box->ymax - box->ymin;
+            int boxwidth = box->xmax - box->xmin + 1;
+            int boxheight = box->ymax - box->ymin + 1;
             
             /* Copy box image to out image */
             for (int y = 0; y < boxheight; y++) {
@@ -79,7 +79,7 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
 - (void) awakeFromNib
 {
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/P1180863-800x600.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/two_lines_border_wong.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
@@ -312,6 +312,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
     binarization_bounding_boxes(lumin, bounding_boxes, width, height);
     //    binarization_threshold(lum_edge, lum_edge, 0, 0, width, width, height, 0, 0, width, 1);
 
+    make_boxes_black_on_white_bg(bounding_boxes);
+
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lumbuf, outputImgBytes, width, height, bitsPerPixel);
     draw_bounding_boxes(outputImgBytes, bounding_boxes, width, height, bitsPerPixel);
@@ -363,6 +365,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
     binarization_bounding_boxes(lumin, bounding_boxes, width, height);
+
+    make_boxes_black_on_white_bg(bounding_boxes);
 
     // draw bounding boxes on screen.
     lum_convert_to_rgb(lumin, outputImgBytes, width, height, bitsPerPixel);

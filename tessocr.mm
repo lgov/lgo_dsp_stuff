@@ -13,8 +13,8 @@
 
 - (char*)run_tesseract:(const conn_box_t *)box;
 {
-    int width = box->xmax - box->xmin;
-    int height = box->ymax - box->ymin;
+    int width = box->xmax - box->xmin + 1;
+    int height = box->ymax - box->ymin + 1;
 
     dsptest_log(LOG_OCR, __FILE__,
                 "Pass image in bounding box (%d,%d)-(%d,%d) to TesseractRect.\n",

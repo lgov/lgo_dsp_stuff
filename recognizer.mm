@@ -8,8 +8,10 @@
 
 #include "util.h"
 #include "graphics.h"
-#include "tessocr.h"
-#include "recognizer.h"
+#include <stdlib.h>
+
+#import "recognizer.h"
+#import "tessocr.h"
 
 @implementation recognizer
 
@@ -18,6 +20,7 @@
                 height:(int)height;
 {
     NSMutableArray *result = [[NSMutableArray alloc] init];
+    const unsigned char *lumin;
     unsigned char *lumtemp = (unsigned char*)malloc(width * height * sizeof(unsigned char));
     unsigned char *rgbatemp = (unsigned char*)malloc(width * height * sizeof(unsigned char) * 4);
     const int bitsPerPixel = 32;
@@ -26,6 +29,18 @@
     /*** Step 1: Edge detection ***/
     canny_edge_detection(inlum, rgbatemp, width, height, bitsPerPixel, &avg_slope);
 
+    /*** Step 1a: if slope, rotate image first ***/
+    if (avg_slope > -180)
+    {
+        unsigned char* lumbuf = (unsigned char*)malloc(width * height * sizeof(unsigned char));
+
+        rotate(inlum, lumbuf, width, height, avg_slope);
+        canny_edge_detection(lumbuf, rgbatemp, width, height, bitsPerPixel, &avg_slope);
+        lumin = lumbuf;
+    } else {
+        lumin = inlum;
+    }
+    
     /*** Step 2: Get small Bounding Boxes ***/
     // canny returns only 4 colors + black =-> any color > 0 should be white.
     rgb_convert_to_bw_treshold(rgbatemp, lumtemp, width, height, bitsPerPixel, 1);
@@ -37,7 +52,9 @@
     bounding_boxes = group_into_lines(bounding_boxes, width, height);
 
     /*** Step 4: Binarization of interior of bounding boxes ***/
-    binarization_bounding_boxes(inlum, bounding_boxes, width, height);
+    binarization_bounding_boxes(lumin, bounding_boxes, width, height);
+
+    make_boxes_black_on_white_bg(bounding_boxes);
 
     /*** Step 5: OCR of binarized bounding boxes ***/
     for(conn_box_t *box in bounding_boxes)
