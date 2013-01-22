@@ -52,7 +52,11 @@
     {
         weighted_str_t *ws = [strings objectAtIndex:index];
 
-        if (ws->weight > str->weight)
+        if (str->similarity > ws->similarity)
+            break;
+
+        if ((str->similarity == ws->similarity) &&
+            (str->weight > ws->weight))
             break;
     }
     [strings insertObject:str atIndex:index];
@@ -134,16 +138,17 @@ static const int top_k = 5;
     while ([string_heap count] > 0)
     {
         /* Take the top element, and count the number of appearances on the heap */
-        int p = 1;
+        int p = 0;
         weighted_str_t *top = [string_heap objectAtIndex:(NSUInteger)0];
 
         /* Pop all elements equal to the top element */
         for (weighted_str_t *s in string_heap) {
-            if (p == 1) {
+            if (p == 0) {
                 top = s;
+                p++;
                 continue;
             }
-            if (s == top) {
+            if (s->str == top->str) {
                 p++;
                 continue;
             }
@@ -153,17 +158,11 @@ static const int top_k = 5;
         /* */
         if  (p >= freq_treshold)
         {
-            if ([top_list count] > 0) {
-                weighted_str_t *last = [top_list objectAtIndex:[top_list count] - 1];
-
-                int weight_top = top->weight;
-                int weight_last = last->weight;
-
-                if (weight_top > weight_last) {
-                    [top_list removeObjectAtIndex:[top_list count] - 1];
-                }
-            }
+            top->similarity = p;
             [self ordered_insert:top_list wstr:top];
+
+            if ([top_list count] > 5)
+                [top_list removeObjectAtIndex:[top_list count] - 1];
 
             freq_treshold = [self required_freq_treshold:top_list];
         }

@@ -410,7 +410,8 @@ typedef struct {
 #define WSTR(x, w)\
 { (x), sizeof(x), w }
 
-- (NSString *) fuzzy_search_test:(const str_weight_t *)dictionary
+- (NSString *) fuzzy_search_test:text
+                      dictionary:(const str_weight_t *)dictionary
                         dict_len:(size_t)dict_len
 {
     fuzzy_search *fz = [[fuzzy_search alloc] init];
@@ -420,7 +421,7 @@ typedef struct {
         [fz load_string:a weight:dictionary[i].weight];
     }
 
-    weighted_str_t *wstr = [fz find_string:@"bcdi"];
+    weighted_str_t *wstr = [fz find_string:text];
     if (wstr)
     {
         return wstr->str;
@@ -429,15 +430,40 @@ typedef struct {
     return nil;
 }
 
-- (void) test_FuzzySearch
+- (void) test_FuzzySearch1
 {
-    const str_weight_t expected[] = { WSTR("abcd", 40),
-        WSTR("abc", 20), WSTR("bcdef", 30)};
+    const str_weight_t dict[] = { WSTR("abcd", 40) };
+    NSString *result = [self fuzzy_search_test:@"abcd"
+                                    dictionary:dict
+                                      dict_len:sizeof(dict)/sizeof(dict[0])];
 
-    NSString *result = [self fuzzy_search_test:expected
-                                      dict_len:sizeof(expected)/sizeof(expected[0])];
+    STAssertTrue(NSOrderedSame == [result compare:@"abcd"], @"Should be the same");
+}
 
-    STAssertTrue(NSOrderedSame == [result compare:@"bcdef"], @"Should be the same");
+
+- (void) test_FuzzySearch2
+{
+    const str_weight_t dict[] = { WSTR("abcd", 40),
+        WSTR("abc", 20), WSTR("bcdef", 30), WSTR("bcdi", 10)};
+
+    NSString *result = [self fuzzy_search_test:@"bcdi"
+                                    dictionary:dict
+                                      dict_len:sizeof(dict)/sizeof(dict[0])];
+
+    STAssertTrue(NSOrderedSame == [result compare:@"bcdi"], @"Should be the same");
+}
+
+- (void) test_FuzzySearch3
+{
+    const str_weight_t dict[] = { WSTR("abcd", 40),
+        WSTR("abc", 20), WSTR("bcdef", 30), WSTR("bcdi", 10),
+        WSTR("bcdij", 5) };
+
+    NSString *result = [self fuzzy_search_test:@"bcdij"
+                                    dictionary:dict
+                                      dict_len:sizeof(dict)/sizeof(dict[0])];
+
+    STAssertTrue(NSOrderedSame == [result compare:@"bcdij"], @"Should be the same");
 }
 
 @end

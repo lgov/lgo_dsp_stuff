@@ -12,6 +12,7 @@
 @public     // TODO: change all these to properties
 	NSString *str;
     int weight;
+    int similarity;
 }
 @end
 
