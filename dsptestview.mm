@@ -8,6 +8,9 @@
 
 #import "dsptestview.h"
 #import "tessocr.h"
+#import "fuzzy_search_db.h"
+#import "recognizer.h"
+
 #include <stdlib.h>
 #include <math.h>
 #include "util.h"
@@ -79,7 +82,7 @@ draw_bounding_boxes(unsigned char *outptr, const NSArray *comps,
 - (void) awakeFromNib
 {
 //	NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/A_wonb.jpg";
-    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/two_lines_border_wong.jpg";
+    NSString* imageName = @"/Users/lgo/macdev/dsptest1/OcrTest/images/P1180863-800x600.jpg";
 	NSData* fileData = [NSData dataWithContentsOfFile:imageName];
 	inImageRep = [NSBitmapImageRep
 				  imageRepWithData:fileData];
@@ -324,7 +327,8 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 
 - (IBAction)ocr:(id)sender
 {
-	tessocr* ocr = [[tessocr alloc] init];
+	tessocr *ocr = [[tessocr alloc] init];
+    recognizer *rec = [[recognizer alloc] init];
 
     int bitsPerPixel  = [inImageRep bitsPerPixel];
 	int width = [inImageRep pixelsWide];
@@ -375,12 +379,32 @@ NSBitmapImageRep *cloneImageRep(NSBitmapImageRep* inImageRep)
 	[imageView setImage:outImage];
 
     /*** Step 5: OCR of binarized bounding boxes ***/
+    fuzzy_search_db *db = [[fuzzy_search_db alloc] init_db:@"/tmp/ramdisc/ratings"];
+
+    NSMutableArray *result = [[NSMutableArray alloc] init];
     for(conn_box_t *box in bounding_boxes) {
 		const char* ocr_text = [ocr run_tesseract:box];
         char* text = filter_ocr_string(ocr_text);
         if (text)
-            dsptest_log(LOG_OCR, __FILE__, "found line: %s\n", text);
+        {
+            NSString *str = [NSString stringWithUTF8String:text];
+            NSArray *matches = [db find_best_matching_movies:str
+                                                        topk:20];
+            for (NSString *m in matches)
+            {
+                int dist = [rec calc_editDistance:str b:m caseInsensitive:true];
+                if (dist < 25)
+                {
+                    if (! [result containsObject:m])
+                        [result addObject:m];
+                }
+            }
+        }
 	}
+
+    for (NSString *str in result)
+        dsptest_log(LOG_OCR, __FILE__, "found line: %s\n", [str UTF8String]);
+
 //	NSString *str = [[NSString alloc] initWithUTF8String:text];
 //	[lbl setStringValue:str];
 }
