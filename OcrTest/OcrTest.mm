@@ -36,7 +36,6 @@
     dsptest_log(LOG_TEST, NULL, "======================================================\n");
 }
 
-#if 0
 /* Calculate and return the Levenshtein distance between two strings. */
 - (int) calc_editDistance:(NSString *)a_in
                         b:(NSString *)b_in
@@ -399,7 +398,6 @@ typedef struct {
     STAssertEquals([self calc_editDistance:@"a" b:@"A" caseInsensitive:true], 0, nil);
     STAssertEquals([self calc_editDistance:@"a" b:@"A" caseInsensitive:false], 2, nil);
 }
-#endif
 
 typedef struct {
     const char *str;
@@ -440,7 +438,6 @@ typedef struct {
     STAssertTrue(NSOrderedSame == [result compare:@"abcd"], @"Should be the same");
 }
 
-
 - (void) test_FuzzySearch2
 {
     const str_weight_t dict[] = { WSTR("abcd", 40),
@@ -464,6 +461,19 @@ typedef struct {
                                       dict_len:sizeof(dict)/sizeof(dict[0])];
 
     STAssertTrue(NSOrderedSame == [result compare:@"bcdij"], @"Should be the same");
+}
+
+- (void) test_FuzzySearch4
+{
+    const str_weight_t dict[] = { WSTR("abcdijk", 40), WSTR("abcd", 40),
+        WSTR("abc", 20), WSTR("bcdef", 30), WSTR("bcdi", 10),
+        WSTR("bcdij", 5), WSTR("ijklm", 2) };
+
+    NSString *result = [self fuzzy_search_test:@"bcdijk"
+                                    dictionary:dict
+                                      dict_len:sizeof(dict)/sizeof(dict[0])];
+
+    STAssertTrue(NSOrderedSame == [result compare:@"abcdijk"], @"Should be the same");
 }
 
 @end

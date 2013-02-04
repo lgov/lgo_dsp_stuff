@@ -11,6 +11,5 @@
 @interface OcrTest : SenTestCase {
     NSMutableDictionary *editDistances;
 }
-- (int) calc_editDistance:(NSString *)a
-                        b:(NSString *)b;
+
 @end
