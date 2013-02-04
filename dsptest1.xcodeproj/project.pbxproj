@@ -14,6 +14,9 @@
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		F3125AE016AC6B8400877797 /* fuzzy_search.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125ADF16AC6B8400877797 /* fuzzy_search.mm */; };
 		F3125AE216AC709B00877797 /* fuzzy_search.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125ADF16AC6B8400877797 /* fuzzy_search.mm */; };
+		F3125AEC16B0713B00877797 /* fuzzy_search_db.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125AEB16B0713B00877797 /* fuzzy_search_db.mm */; };
+		F3125AED16B0713B00877797 /* fuzzy_search_db.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3125AEB16B0713B00877797 /* fuzzy_search_db.mm */; };
+		F3125AEF16B08F8E00877797 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F3125AEE16B08F8E00877797 /* libsqlite3.dylib */; };
 		F32C1ED714E30B1600C594FB /* dsptestview.mm in Sources */ = {isa = PBXBuildFile; fileRef = F32C1ED614E30B1600C594FB /* dsptestview.mm */; };
 		F39B2748167BCADC0085D61A /* util.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2747167BCADC0085D61A /* util.mm */; };
 		F39B2756167E53A70085D61A /* graphics.mm in Sources */ = {isa = PBXBuildFile; fileRef = F39B2755167E53A70085D61A /* graphics.mm */; };
@@ -33,6 +36,7 @@
 		F3FE478D153956CF00CA9DDF /* tessocr.mm in Sources */ = {isa = PBXBuildFile; fileRef = F3FE478C153956CF00CA9DDF /* tessocr.mm */; };
 		F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F3FE4840153965A900CA9DDF /* libtesseract.a */; };
 		F3FEF2CC153AC5B200CA9DDF /* tessdata in Resources */ = {isa = PBXBuildFile; fileRef = F3FEF2C1153AC5B200CA9DDF /* tessdata */; };
+		F3FFDC0A16BE97DC0027D0DD /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F3125AEE16B08F8E00877797 /* libsqlite3.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +54,10 @@
 		8D1107320486CEB800E47090 /* dsptest1.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dsptest1.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F3125ADF16AC6B8400877797 /* fuzzy_search.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = fuzzy_search.mm; sourceTree = "<group>"; };
 		F3125AE116AC6B9D00877797 /* fuzzy_search.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fuzzy_search.h; sourceTree = "<group>"; };
+		F3125AEA16B0711300877797 /* fuzzy_search_db.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = fuzzy_search_db.h; sourceTree = "<group>"; };
+		F3125AEB16B0713B00877797 /* fuzzy_search_db.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = fuzzy_search_db.mm; sourceTree = "<group>"; };
+		F3125AEE16B08F8E00877797 /* libsqlite3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = ../../../../usr/lib/libsqlite3.dylib; sourceTree = "<group>"; };
+		F3125B0A16B3E2E300877797 /* load_ratings.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = load_ratings.xcodeproj; path = load_ratings/load_ratings.xcodeproj; sourceTree = "<group>"; };
 		F32C1ED514E30B1600C594FB /* dsptestview.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dsptestview.h; sourceTree = "<group>"; };
 		F32C1ED614E30B1600C594FB /* dsptestview.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = dsptestview.mm; sourceTree = "<group>"; };
 		F39B2747167BCADC0085D61A /* util.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = util.mm; sourceTree = "<group>"; };
@@ -82,6 +90,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F3FFDC0A16BE97DC0027D0DD /* libsqlite3.dylib in Frameworks */,
 				F3E7425B16793B7000EED3B1 /* Accelerate.framework in Frameworks */,
 				8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */,
 				F3FE4841153965A900CA9DDF /* libtesseract.a in Frameworks */,
@@ -92,6 +101,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F3125AEF16B08F8E00877797 /* libsqlite3.dylib in Frameworks */,
 				F39B27811685C3A60085D61A /* libtesseract.a in Frameworks */,
 				F39B27801685C30A0085D61A /* Cocoa.framework in Frameworks */,
 				F39B27661683BE120085D61A /* SenTestingKit.framework in Frameworks */,
@@ -142,6 +152,10 @@
 		29B97314FDCFA39411CA2CEA /* dsptest1 */ = {
 			isa = PBXGroup;
 			children = (
+				F3125B0A16B3E2E300877797 /* load_ratings.xcodeproj */,
+				F3125AEE16B08F8E00877797 /* libsqlite3.dylib */,
+				F3125AEB16B0713B00877797 /* fuzzy_search_db.mm */,
+				F3125AEA16B0711300877797 /* fuzzy_search_db.h */,
 				F3125ADF16AC6B8400877797 /* fuzzy_search.mm */,
 				F3125AE116AC6B9D00877797 /* fuzzy_search.h */,
 				F39B277F1685C30A0085D61A /* Cocoa.framework */,
@@ -197,6 +211,13 @@
 				1058C7A2FEA54F0111CA2CBB /* Other Frameworks */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		F3125B0B16B3E2E300877797 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		F39B27691683BE120085D61A /* OcrTest */ = {
@@ -279,6 +300,12 @@
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* dsptest1 */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = F3125B0B16B3E2E300877797 /* Products */;
+					ProjectRef = F3125B0A16B3E2E300877797 /* load_ratings.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				8D1107260486CEB800E47090 /* dsptest1 */,
@@ -339,6 +366,7 @@
 				F39B2756167E53A70085D61A /* graphics.mm in Sources */,
 				F39B277E1685B21B0085D61A /* recognizer.mm in Sources */,
 				F3125AE016AC6B8400877797 /* fuzzy_search.mm in Sources */,
+				F3125AEC16B0713B00877797 /* fuzzy_search_db.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -352,6 +380,7 @@
 				F39B27841685F1B60085D61A /* util.mm in Sources */,
 				F39B27851685F1C70085D61A /* tessocr.mm in Sources */,
 				F3125AE216AC709B00877797 /* fuzzy_search.mm in Sources */,
+				F3125AED16B0713B00877797 /* fuzzy_search_db.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
