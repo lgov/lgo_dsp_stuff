@@ -6,9 +6,18 @@
 //
 //
 
-#ifndef dsptest1_sqlite_store_h
-#define dsptest1_sqlite_store_h
+#import <Cocoa/Cocoa.h>
 
+#include <sqlite3.h>
 
+@class weighted_str_t;
 
-#endif
+@interface fuzzy_search_db : NSObject {
+    sqlite3 *db;
+}
+
+-(id)init_db:(NSString *)db_name;
+-(NSArray*)find_best_matching_movies:(NSString *)movie
+                                topk:(int)topk;
+
+@end
