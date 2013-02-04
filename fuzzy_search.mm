@@ -70,6 +70,11 @@
 
     for (NSString *ng in str_ngrams)
     {
+        weighted_str_t *wstr = [[weighted_str_t alloc] init];
+        wstr->str = str; wstr->strid = (long)str;
+        wstr->weight = weight;
+        wstr->ngram = ng;
+
         NSMutableArray *strings = [ngrams objectForKey:ng];
         if (strings == nil)
         {
@@ -77,47 +82,67 @@
             [ngrams setObject:strings forKey:ng];
         }
         /* Ordered insert */
-        weighted_str_t *wstr = [[weighted_str_t alloc] init];
-        wstr->str = str; wstr->weight = weight;
         [self ordered_insert:strings wstr:wstr];
     }
 }
 
-static const int top_k = 5;
+static const int top_k = 1;
 
 -(int)required_freq_treshold:(NSArray*)top_list
 {
-    if ([top_list count] <= top_k)
+    if ([top_list count] < top_k)
         return 1;
-    /* fix */
-    return 1000;
+
+    weighted_str_t *last = [top_list objectAtIndex:[top_list count]-1];
+    return last->similarity;
 }
 
 -(void)push_next_elements_to_heap:(NSArray *)str_ngrams
-                          pop_str:(weighted_str_t *)pop_str
+                       pop_ngrams:(NSMutableArray *)pop_ngrams
+                          minimum:(weighted_str_t *)minimum
                              heap:(NSMutableArray *)heap
 {
+    NSArray *ngrams_to_pop = pop_ngrams ? pop_ngrams : str_ngrams;
+
     /* Insert the top element on each list to the heap */
-    for (NSString *ng in str_ngrams)
+    for (NSString *ng in ngrams_to_pop)
     {
         NSMutableArray *ar = [ngrams objectForKey:ng];
-        if (ar == nil)
-            continue; /* this ngram was found in no single string */
+        weighted_str_t *wstr;
 
-        weighted_str_t *str = [ar objectAtIndex:0];
-        if ((pop_str == NULL) ||
-            (pop_str != NULL && str == pop_str))
+        if (ar == nil || [ar count] == 0)
+            continue; /* no more strings for this ngram */
+
+        if (minimum)
         {
-            /* Initial setup or this string was handled, move to the next */
-            if (pop_str)
-                [ar removeObjectAtIndex:0];
-            
-            if ([ar count] > 0) {
-                str = [ar objectAtIndex:0];
-                [self ordered_insert:heap wstr:str];
+            /* find elements to skip and remove them from the ngram stack */
+            int elems_to_skip;
+            for (elems_to_skip = 0; elems_to_skip < [ar count]; elems_to_skip++)
+            {
+                wstr = [ar objectAtIndex:0];
+                if (wstr->weight <= minimum->weight)
+                    break;
             }
+            for (int j=0;j < elems_to_skip; j++)
+                [ar removeObjectAtIndex:0];
+        }
+
+        /* Remove the element from the stack and return to the caller. */
+        if ([ar count] > 0)
+        {
+            wstr = [ar objectAtIndex:0];
+
+            printf(" %s:%s\n", [ng UTF8String], [wstr->str UTF8String]);
+
+            wstr = [ar objectAtIndex:0];
+            [self ordered_insert:heap wstr:wstr];
+            [ar removeObjectAtIndex:0];
         }
     }
+
+    /* All ngrams replenished. */
+    if (pop_ngrams)
+        [pop_ngrams removeAllObjects];
 }
 
 -(weighted_str_t*)find_string:(NSString *)fs
@@ -129,31 +154,39 @@ static const int top_k = 5;
 
     /* Setup the initial heap with one element from each matching ngram. */
     [self push_next_elements_to_heap:str_ngrams
-                             pop_str:NULL
+                          pop_ngrams:NULL
+                             minimum:NULL
                                 heap:string_heap];
 
     int freq_treshold = 1;
 
-    /* */
-    while ([string_heap count] > 0)
+    /* TODO: take care of same ngram multiple times in string */
+    while ([string_heap count] > 0 && freq_treshold < [str_ngrams count])
     {
         /* Take the top element, and count the number of appearances on the heap */
-        int p = 0;
+        int p = 1;
         weighted_str_t *top = [string_heap objectAtIndex:(NSUInteger)0];
+        NSMutableArray *top_ngrams = [[NSMutableArray alloc] init];
+        [top_ngrams addObject:top->ngram];
+
+        printf("heap:");
+        for (weighted_str_t *s in string_heap)
+            printf("%s(%d),", [s->str UTF8String], s->weight);
+        printf("\n");
 
         /* Pop all elements equal to the top element */
-        for (weighted_str_t *s in string_heap) {
-            if (p == 0) {
-                top = s;
-                p++;
-                continue;
-            }
-            if (s->str == top->str) {
-                p++;
-                continue;
-            }
-            break;
+        for (int i = 1; i < [string_heap count]; i++)
+        {
+            weighted_str_t *s = [string_heap objectAtIndex:(NSUInteger)i];
+            if (s->strid!= top->strid)
+                break;
+
+            [top_ngrams addObject:s->ngram];
+            p++;
         }
+
+        for (int i = 0; i<p; i++)
+            [string_heap removeObjectAtIndex:(NSUInteger)0];
 
         /* */
         if  (p >= freq_treshold)
@@ -161,28 +194,48 @@ static const int top_k = 5;
             top->similarity = p;
             [self ordered_insert:top_list wstr:top];
 
-            if ([top_list count] > 5)
+            if ([top_list count] > top_k)
                 [top_list removeObjectAtIndex:[top_list count] - 1];
 
             freq_treshold = [self required_freq_treshold:top_list];
+
+            /* From each matching ngram list that has element top, pop it and then
+             add the next element of that ngram list to the heap. */
+            [self push_next_elements_to_heap:str_ngrams
+                                  pop_ngrams:top_ngrams
+                                     minimum:NULL
+                                        heap:string_heap];
+
+        } else
+        {
+            /* Pop additional freq_treshold - p - 1 elements from heap */
+            int c = freq_treshold - p - 1;
+            for (int i = 0; i < c; i++) {
+                if ([string_heap count] == 0)
+                    break;
+
+                weighted_str_t *top = [string_heap objectAtIndex:(NSUInteger)0];
+                [top_ngrams addObject:top->ngram];
+
+                [string_heap removeObjectAtIndex:(NSUInteger)0];
+            }
+
+            if ([string_heap count] == 0)
+                break; /* early exit, not enough unique ngrams left */
+
+            top = [string_heap objectAtIndex:(NSUInteger)0];
+            [self push_next_elements_to_heap:str_ngrams
+                                  pop_ngrams:top_ngrams
+                                     minimum:top
+                                        heap:string_heap];
         }
-
-        for (int i = 0; i<p; i++)
-            [string_heap removeObjectAtIndex:(NSUInteger)0];
-
-        /* From each matching ngram list that has element top, pop it and then
-           add the next element of that ngram list to the heap. */
-        [self push_next_elements_to_heap:str_ngrams
-                                 pop_str:top
-                                    heap:string_heap];
-
-
-        
     }
 
-    if ([top_list count] > 0)
-        return ([top_list objectAtIndex:(NSUInteger)0]);
-    else
+    if ([top_list count] == 0)
         return NULL;
+
+    weighted_str_t *wstr = [top_list objectAtIndex:(NSUInteger)0];
+
+    return wstr;
 }
 @end
